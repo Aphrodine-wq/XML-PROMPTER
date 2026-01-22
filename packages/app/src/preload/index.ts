@@ -12,7 +12,27 @@ const api = {
   openFolderDialog: () => ipcRenderer.invoke('open-folder-dialog'),
   readDirectory: (path: string) => ipcRenderer.invoke('read-directory', path),
   readFile: (path: string) => ipcRenderer.invoke('read-file', path),
-  writeFile: (path: string, content: string) => ipcRenderer.invoke('write-file', path, content)
+  writeFile: (path: string, content: string) => ipcRenderer.invoke('write-file', path, content),
+  // AI Provider APIs
+  getAvailableProviders: () => ipcRenderer.invoke('get-available-providers'),
+  setProvider: (provider: string) => ipcRenderer.invoke('set-provider', provider),
+  getCurrentProvider: () => ipcRenderer.invoke('get-current-provider'),
+  // Project Context APIs
+  analyzeProject: (dirPath: string) => ipcRenderer.invoke('analyze-project', dirPath),
+  generateContextPrompt: (dirPath: string) => ipcRenderer.invoke('generate-context-prompt', dirPath),
+  // Analytics APIs
+  getAnalytics: () => ipcRenderer.invoke('get-analytics'),
+  getMetrics: (filter?: any) => ipcRenderer.invoke('get-metrics', filter),
+  // Batch Processing APIs
+  createBatchJob: (name: string, items: any[]) => ipcRenderer.invoke('create-batch-job', name, items),
+  getBatchJob: (jobId: string) => ipcRenderer.invoke('get-batch-job', jobId),
+  executeBatch: (jobId: string, options?: any) => ipcRenderer.invoke('execute-batch', jobId, options),
+  listBatchJobs: (filter?: any) => ipcRenderer.invoke('list-batch-jobs', filter),
+  // Collaboration APIs
+  createCollaborationSession: (name: string, participants?: string[]) => ipcRenderer.invoke('create-collaboration-session', name, participants),
+  getPromptHistory: (promptId: string) => ipcRenderer.invoke('get-prompt-history', promptId),
+  createPromptVersion: (promptId: string, content: string, author: string, message: string) => ipcRenderer.invoke('create-prompt-version', promptId, content, author, message),
+  getPromptDiff: (promptId: string, v1: number, v2: number) => ipcRenderer.invoke('get-prompt-diff', promptId, v1, v2)
 }
 
 if (process.contextIsolated) {
