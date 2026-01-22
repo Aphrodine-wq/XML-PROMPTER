@@ -162,6 +162,143 @@ app.whenReady().then(() => {
     }
   });
 
+  // AI Provider Handlers
+  ipcMain.handle('get-available-providers', async () => {
+    const { aiManager } = await import('@xmlpg/core');
+    try {
+      return await aiManager.getAvailableProviders();
+    } catch (e) {
+      return ['ollama'];
+    }
+  });
+
+  ipcMain.handle('set-provider', async (_, provider: string) => {
+    const { aiManager } = await import('@xmlpg/core');
+    try {
+      await aiManager.setProvider(provider as any);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  });
+
+  ipcMain.handle('get-current-provider', async () => {
+    const { aiManager } = await import('@xmlpg/core');
+    return aiManager.getCurrentProvider();
+  });
+
+  // Project Context Handlers
+  ipcMain.handle('analyze-project', async (_, dirPath: string) => {
+    const { projectContextAnalyzer } = await import('@xmlpg/core');
+    try {
+      return await projectContextAnalyzer.analyzeProject(dirPath);
+    } catch (e) {
+      return null;
+    }
+  });
+
+  ipcMain.handle('generate-context-prompt', async (_, dirPath: string) => {
+    const { projectContextAnalyzer } = await import('@xmlpg/core');
+    try {
+      return await projectContextAnalyzer.generateContextPrompt(dirPath);
+    } catch (e) {
+      return '';
+    }
+  });
+
+  // Analytics Handlers
+  ipcMain.handle('get-analytics', async () => {
+    const { database } = await import('@xmlpg/core');
+    try {
+      return await database.getAggregateStats();
+    } catch (e) {
+      return null;
+    }
+  });
+
+  ipcMain.handle('get-metrics', async (_, filter?: any) => {
+    const { database } = await import('@xmlpg/core');
+    try {
+      return await database.getMetrics(filter);
+    } catch (e) {
+      return [];
+    }
+  });
+
+  // Batch Processing Handlers
+  ipcMain.handle('create-batch-job', async (_, name: string, items: any[]) => {
+    const { batchProcessor } = await import('@xmlpg/core');
+    try {
+      return await batchProcessor.createJob(name, items);
+    } catch (e) {
+      return null;
+    }
+  });
+
+  ipcMain.handle('get-batch-job', async (_, jobId: string) => {
+    const { batchProcessor } = await import('@xmlpg/core');
+    try {
+      return await batchProcessor.getJobStatus(jobId);
+    } catch (e) {
+      return null;
+    }
+  });
+
+  ipcMain.handle('execute-batch', async (_, jobId: string, options?: any) => {
+    const { batchProcessor } = await import('@xmlpg/core');
+    try {
+      return await batchProcessor.executeBatch(jobId, options);
+    } catch (e) {
+      return null;
+    }
+  });
+
+  ipcMain.handle('list-batch-jobs', async (_, filter?: any) => {
+    const { batchProcessor } = await import('@xmlpg/core');
+    try {
+      return await batchProcessor.listJobs(filter);
+    } catch (e) {
+      return [];
+    }
+  });
+
+  // Collaboration Handlers
+  ipcMain.handle('create-collaboration-session', async (_, name: string, participants?: string[]) => {
+    const { collaborationManager } = await import('@xmlpg/core');
+    try {
+      return await collaborationManager.createSession(name, participants);
+    } catch (e) {
+      return null;
+    }
+  });
+
+  ipcMain.handle('get-prompt-history', async (_, promptId: string) => {
+    const { collaborationManager } = await import('@xmlpg/core');
+    try {
+      return await collaborationManager.getHistory(promptId);
+    } catch (e) {
+      return [];
+    }
+  });
+
+  ipcMain.handle('create-prompt-version', async (_, promptId: string, content: string, author: string, message: string) => {
+    const { collaborationManager } = await import('@xmlpg/core');
+    try {
+      return await collaborationManager.createVersion(promptId, content, author, message);
+    } catch (e) {
+      return null;
+    }
+  });
+
+  ipcMain.handle('get-prompt-diff', async (_, promptId: string, v1: number, v2: number) => {
+    const { collaborationManager } = await import('@xmlpg/core');
+    try {
+      return await collaborationManager.getDiff(promptId, v1, v2);
+    } catch (e) {
+      return null;
+    }
+  });
+
   createWindow()
 
   app.on('activate', function () {

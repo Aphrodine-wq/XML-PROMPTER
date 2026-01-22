@@ -1,5 +1,11 @@
-export const CORE_VERSION = '0.0.1';
+export const CORE_VERSION = '0.5.0';
 export * from './types.js';
 export * from './ollama.js';
 export * from './templates.js';
 export * from './history.js';
+export * from './ai-provider.js';
+export * from './ai-manager.js';
+export * from './database.js';
+export * from './project-context.js';
+export * from './batch-processor.js';
+export * from './collaboration.js';
