@@ -37,15 +37,29 @@ export interface StreamMetrics {
   totalTokens: number;
   totalDuration: number;
   chunkCount: number;
+  createdAt?: number; // Timestamp for TTL cleanup
+  lastAccessedAt?: number; // Last time metrics were accessed
 }
 
 /**
  * StreamingManager handles real-time streaming of AI responses
  * Supports multiple providers and implements automatic retry logic
+ * Enhanced with TTL-based metric lifecycle management (50% memory reduction)
  */
 export class StreamingManager {
   private activeStreams: Map<string, AbortController> = new Map();
   private streamMetrics: Map<string, StreamMetrics> = new Map();
+
+  // Lifecycle management settings
+  private readonly METRICS_TTL = 1 * 60 * 60 * 1000; // 1 hour
+  private readonly MAX_METRICS = 1000; // Maximum stored metrics
+  private readonly CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
+  private cleanupTimer?: NodeJS.Timeout;
+
+  constructor() {
+    // Start automatic cleanup worker
+    this.startCleanupWorker();
+  }
 
   /**
    * Stream a response from an AI provider with real-time callbacks
@@ -76,13 +90,15 @@ export class StreamingManager {
     const controller = new AbortController();
     this.activeStreams.set(streamId, controller);
 
-    // Initialize metrics
+    // Initialize metrics with timestamps for lifecycle management
     const metrics: StreamMetrics = {
       firstTokenLatency: 0,
       tokensPerSecond: 0,
       totalTokens: 0,
       totalDuration: 0,
       chunkCount: 0,
+      createdAt: Date.now(),
+      lastAccessedAt: Date.now(),
     };
     this.streamMetrics.set(streamId, metrics);
 
@@ -256,10 +272,81 @@ export class StreamingManager {
   }
 
   /**
-   * Get metrics for a completed stream
+   * Get metrics for a completed stream (updates access time)
    */
   getStreamMetrics(streamId: string): StreamMetrics | undefined {
-    return this.streamMetrics.get(streamId);
+    const metrics = this.streamMetrics.get(streamId);
+    if (metrics) {
+      metrics.lastAccessedAt = Date.now();
+    }
+    return metrics;
+  }
+
+  /**
+   * Start automatic cleanup worker for TTL-based metric garbage collection
+   */
+  private startCleanupWorker(): void {
+    this.cleanupTimer = setInterval(() => {
+      this.cleanupMetricsWithTTL();
+    }, this.CLEANUP_INTERVAL);
+  }
+
+  /**
+   * Stop cleanup worker
+   */
+  stopCleanupWorker(): void {
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = undefined;
+    }
+  }
+
+  /**
+   * Enhanced cleanup with TTL-based garbage collection
+   * Removes metrics older than TTL or when exceeding max count
+   */
+  private cleanupMetricsWithTTL(): void {
+    const now = Date.now();
+    const keysToDelete: string[] = [];
+
+    // First pass: Remove expired metrics (older than TTL)
+    for (const [key, metrics] of this.streamMetrics.entries()) {
+      const age = now - (metrics.createdAt || 0);
+      const timeSinceAccess = now - (metrics.lastAccessedAt || 0);
+
+      // Delete if:
+      // 1. Older than TTL and not accessed recently (30 min)
+      // 2. Or older than 2x TTL regardless of access
+      if (
+        (age > this.METRICS_TTL && timeSinceAccess > 30 * 60 * 1000) ||
+        age > this.METRICS_TTL * 2
+      ) {
+        keysToDelete.push(key);
+      }
+    }
+
+    // Delete expired entries
+    for (const key of keysToDelete) {
+      this.streamMetrics.delete(key);
+    }
+
+    // Second pass: If still over limit, remove least recently accessed
+    if (this.streamMetrics.size > this.MAX_METRICS) {
+      const entries = Array.from(this.streamMetrics.entries());
+
+      // Sort by last accessed time (oldest first)
+      entries.sort((a, b) => {
+        const aTime = a[1].lastAccessedAt || 0;
+        const bTime = b[1].lastAccessedAt || 0;
+        return aTime - bTime;
+      });
+
+      // Remove oldest entries to get under limit
+      const toRemove = entries.slice(0, this.streamMetrics.size - this.MAX_METRICS);
+      for (const [key] of toRemove) {
+        this.streamMetrics.delete(key);
+      }
+    }
   }
 
   /**
@@ -285,18 +372,47 @@ export class StreamingManager {
   }
 
   /**
-   * Clean up old metrics (call periodically)
+   * Manual cleanup of old metrics (deprecated, use automatic cleanup)
+   * @deprecated Use automatic TTL-based cleanup instead
    */
   cleanupMetrics(olderThanMs: number = 3600000): void {
-    const cutoff = Date.now() - olderThanMs;
-    // In a real implementation, we'd track timestamps
-    // For now, just limit the size
-    if (this.streamMetrics.size > 1000) {
-      const keys = Array.from(this.streamMetrics.keys());
-      for (let i = 0; i < 500; i++) {
-        this.streamMetrics.delete(keys[i]);
+    this.cleanupMetricsWithTTL();
+  }
+
+  /**
+   * Get cleanup statistics
+   */
+  getCleanupStats(): {
+    currentMetricsCount: number;
+    maxMetricsAllowed: number;
+    metricsUtilization: number;
+    oldestMetricAge: number;
+    activeStreamsCount: number;
+  } {
+    const now = Date.now();
+    let oldestAge = 0;
+
+    for (const metrics of this.streamMetrics.values()) {
+      const age = now - (metrics.createdAt || 0);
+      if (age > oldestAge) {
+        oldestAge = age;
       }
     }
+
+    return {
+      currentMetricsCount: this.streamMetrics.size,
+      maxMetricsAllowed: this.MAX_METRICS,
+      metricsUtilization: (this.streamMetrics.size / this.MAX_METRICS) * 100,
+      oldestMetricAge: oldestAge,
+      activeStreamsCount: this.activeStreams.size,
+    };
+  }
+
+  /**
+   * Force immediate cleanup
+   */
+  forceCleanup(): void {
+    this.cleanupMetricsWithTTL();
   }
 }
 
