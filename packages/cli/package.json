@@ -1,0 +1,21 @@
+{
+  "name": "@xmlpg/cli",
+  "version": "0.0.1",
+  "type": "module",
+  "bin": {
+    "xmlpg": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@xmlpg/core": "*",
+    "commander": "^11.0.0",
+    "chalk": "^5.3.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "@types/node": "^20.0.0"
+  }
+}
