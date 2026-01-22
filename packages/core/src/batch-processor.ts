@@ -79,7 +79,7 @@ export class BatchProcessor {
 
         const batchPromises = batch.map(async (item) => {
           try {
-            const result = await aiManager.generate(item.prompt, options);
+            const result = await aiManager.generate({ prompt: item.prompt, model: options?.model || 'llama3', ...options });
             item.status = 'completed';
             item.result = result.response;
             job.completedItems++;
@@ -141,7 +141,7 @@ export class BatchProcessor {
 
     for (const item of failedItems) {
       try {
-        const result = await aiManager.generate(item.prompt, options);
+        const result = await aiManager.generate({ prompt: item.prompt, model: options?.model || 'llama3', ...options });
         item.status = 'completed';
         item.result = result.response;
         item.error = undefined;

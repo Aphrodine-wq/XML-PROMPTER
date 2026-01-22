@@ -1,8 +1,7 @@
 import { GenerationResponse } from './types.js';
-import crypto from 'crypto';
-import fs from 'fs/promises';
-import path from 'path';
-import os from 'os';
+
+// Environment detection
+const isBrowser = typeof window !== 'undefined';
 
 export interface CacheEntry {
   key: string;
@@ -19,12 +18,13 @@ export class ResponseCache {
   private l1Cache: Map<string, CacheEntry> = new Map();
   private maxL1Size: number = 500;
 
-  // L2: Disk cache directory (warm data, persistent)
-  private l2CacheDir: string;
+  // L2: Disk cache directory (warm data, persistent) - disabled in browser
+  private l2CacheDir: string = '';
   private maxL2Size: number = 2000;
   private l2Index: Map<string, { path: string; timestamp: number; hitCount: number }> = new Map();
 
   private defaultTTL: number = 24 * 60 * 60 * 1000; // 24 hours
+  private isBrowser: boolean;
 
   // Performance stats
   private stats = {
@@ -36,40 +36,46 @@ export class ResponseCache {
   };
 
   constructor() {
-    // Create L2 cache directory
-    this.l2CacheDir = path.join(os.tmpdir(), 'xmlpg-cache-l2');
-    this.initL2Cache();
-  }
+    this.isBrowser = isBrowser;
 
-  // Initialize L2 disk cache
-  private async initL2Cache(): Promise<void> {
-    try {
-      await fs.mkdir(this.l2CacheDir, { recursive: true });
-      // Load L2 index
-      await this.loadL2Index();
-    } catch (error) {
-      console.error('Failed to initialize L2 cache:', error);
+    // L2 cache only works in Node.js - in browser, this is a no-op
+    if (!this.isBrowser) {
+      // Lazy load Node.js modules only when needed
+      this.initL2CacheNode();
     }
   }
 
-  // Load L2 cache index from disk
-  private async loadL2Index(): Promise<void> {
+  // Initialize L2 disk cache (Node.js only)
+  private async initL2CacheNode(): Promise<void> {
+    if (this.isBrowser) return;
+
     try {
-      const files = await fs.readdir(this.l2CacheDir);
-      for (const file of files) {
-        if (file.endsWith('.json')) {
-          const key = file.replace('.json', '');
-          const filePath = path.join(this.l2CacheDir, file);
-          const stat = await fs.stat(filePath);
-          this.l2Index.set(key, {
-            path: filePath,
-            timestamp: stat.mtimeMs,
-            hitCount: 0
-          });
+      // Dynamic import to avoid bundling in browser builds
+      const path = await import('path');
+      const os = await import('os');
+      const fs = await import('fs/promises');
+
+      this.l2CacheDir = path.join(os.tmpdir(), 'xmlpg-cache-l2');
+      await fs.mkdir(this.l2CacheDir, { recursive: true });
+      try {
+        const files = await fs.readdir(this.l2CacheDir);
+        for (const file of files) {
+          if (file.endsWith('.json')) {
+            const key = file.replace('.json', '');
+            const filePath = path.join(this.l2CacheDir, file);
+            const stat = await fs.stat(filePath);
+            this.l2Index.set(key, {
+              path: filePath,
+              timestamp: stat.mtimeMs,
+              hitCount: 0
+            });
+          }
         }
+      } catch (error) {
+        // Ignore errors during index loading
       }
     } catch (error) {
-      // Ignore errors during index loading
+      // L2 cache unavailable, will use L1 only
     }
   }
 
@@ -77,11 +83,14 @@ export class ResponseCache {
    * Generate cache key from prompt and options
    */
   private generateKey(prompt: string, model: string, provider: string): string {
-    const hash = crypto
-      .createHash('sha256')
-      .update(`${prompt}:${model}:${provider}`)
-      .digest('hex');
-    return hash;
+    const input = `${prompt}:${model}:${provider}`;
+
+    // Use djb2 hash algorithm (works in both browser and Node.js)
+    let hash = 5381;
+    for (let i = 0; i < input.length; i++) {
+      hash = ((hash << 5) + hash) + input.charCodeAt(i); // hash * 33 + c
+    }
+    return (hash >>> 0).toString(36); // Convert to unsigned and base36
   }
 
   /**
@@ -103,22 +112,24 @@ export class ResponseCache {
       }
     }
 
-    // L2: Check disk cache (slower but persistent)
-    const l2Entry = await this.getFromL2(key);
-    if (l2Entry) {
-      // Check if expired
-      if (Date.now() - l2Entry.timestamp > l2Entry.ttl) {
-        await this.removeFromL2(key);
-      } else {
-        this.stats.l2Hits++;
+    // L2: Check disk cache (slower but persistent) - only in Node.js
+    if (!this.isBrowser) {
+      const l2Entry = await this.getFromL2(key);
+      if (l2Entry) {
+        // Check if expired
+        if (Date.now() - l2Entry.timestamp > l2Entry.ttl) {
+          await this.removeFromL2(key);
+        } else {
+          this.stats.l2Hits++;
 
-        // Promote to L1 if accessed frequently
-        if (l2Entry.hitCount >= 2) {
-          this.promoteToL1(key, l2Entry);
-          this.stats.promotions++;
+          // Promote to L1 if accessed frequently
+          if (l2Entry.hitCount >= 2) {
+            this.promoteToL1(key, l2Entry);
+            this.stats.promotions++;
+          }
+
+          return l2Entry.response;
         }
-
-        return l2Entry.response;
       }
     }
 
@@ -147,10 +158,13 @@ export class ResponseCache {
 
   // Get entry from L2 disk cache with optimized binary serialization
   private async getFromL2(key: string): Promise<CacheEntry | null> {
+    if (this.isBrowser) return null;
+
     const index = this.l2Index.get(key);
     if (!index) return null;
 
     try {
+      const fs = await import('fs/promises');
       // Optimized: Use binary buffer for faster reads (3-5x improvement)
       const data = await fs.readFile(index.path);
       const entry = JSON.parse(data.toString('utf-8')) as CacheEntry;
@@ -172,10 +186,13 @@ export class ResponseCache {
 
   // Remove entry from L2 cache
   private async removeFromL2(key: string): Promise<void> {
+    if (this.isBrowser) return;
+
     const index = this.l2Index.get(key);
     if (!index) return;
 
     try {
+      const fs = await import('fs/promises');
       await fs.unlink(index.path);
     } catch {
       // Ignore errors
@@ -218,14 +235,21 @@ export class ResponseCache {
 
     // Add to L1 cache
     if (this.l1Cache.size >= this.maxL1Size && !this.l1Cache.has(key)) {
-      // L1 is full, demote least used to L2
-      await this.demoteToL2();
+      // L1 is full, demote least used to L2 (only in Node.js)
+      if (!this.isBrowser) {
+        await this.demoteToL2();
+      } else {
+        // In browser, just evict from L1
+        this.evictFromL1();
+      }
     }
 
     this.l1Cache.set(key, entry);
 
-    // Also persist to L2 for durability
-    await this.saveToL2(key, entry);
+    // Also persist to L2 for durability (only in Node.js)
+    if (!this.isBrowser) {
+      await this.saveToL2(key, entry);
+    }
   }
 
   // Synchronous set for backward compatibility (L1 only)
@@ -282,6 +306,8 @@ export class ResponseCache {
 
   // Save entry to L2 disk cache with optimized writes (2-3x faster)
   private async saveToL2(key: string, entry: CacheEntry): Promise<void> {
+    if (this.isBrowser) return;
+
     // Check L2 size limit
     if (this.l2Index.size >= this.maxL2Size && !this.l2Index.has(key)) {
       // Evict oldest from L2
@@ -292,9 +318,11 @@ export class ResponseCache {
       await this.removeFromL2(oldest[0]);
     }
 
-    const filePath = path.join(this.l2CacheDir, `${key}.json`);
-
     try {
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      const filePath = path.join(this.l2CacheDir, `${key}.json`);
+
       // Optimized: Compact JSON without formatting (30-40% faster writes)
       const buffer = Buffer.from(JSON.stringify(entry), 'utf-8');
       await fs.writeFile(filePath, buffer);
@@ -316,16 +344,20 @@ export class ResponseCache {
     // Clear L1
     this.l1Cache.clear();
 
-    // Clear L2
-    try {
-      const files = await fs.readdir(this.l2CacheDir);
-      for (const file of files) {
-        if (file.endsWith('.json')) {
-          await fs.unlink(path.join(this.l2CacheDir, file));
+    // Clear L2 (only in Node.js)
+    if (!this.isBrowser && this.l2CacheDir) {
+      try {
+        const fs = await import('fs/promises');
+        const path = await import('path');
+        const files = await fs.readdir(this.l2CacheDir);
+        for (const file of files) {
+          if (file.endsWith('.json')) {
+            await fs.unlink(path.join(this.l2CacheDir, file));
+          }
         }
+      } catch {
+        // Ignore errors
       }
-    } catch {
-      // Ignore errors
     }
 
     this.l2Index.clear();

@@ -1,4 +1,4 @@
-import { parse } from 'fast-xml-parser';
+import { XMLParser } from 'fast-xml-parser';
 
 export type ExportFormat = 'html' | 'react' | 'vue' | 'css' | 'tailwind' | 'json';
 
@@ -38,10 +38,11 @@ export class FormatExporter {
    * Parse XML to object
    */
   private static parseXML(xml: string): unknown {
-    return parse(xml, {
+    const parser = new XMLParser({
       ignoreAttributes: false,
       parseTagValue: true
     });
+    return parser.parse(xml);
   }
 
   /**

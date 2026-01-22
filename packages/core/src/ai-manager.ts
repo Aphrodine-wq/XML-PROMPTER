@@ -1,203 +1,93 @@
-import { GenerationOptions, GenerationResponse, Model, AIProvider, ProviderConfig } from './types.js';
-import { createProvider, IAIProvider } from './ai-provider.js';
-import { OllamaService } from './ollama.js';
-import { responseCache } from './response-cache.js';
-import { providerRanking, RequestMetric } from './provider-ranking.js';
+import { AIProvider } from './ai-provider.js';
+import { Model, GenerationOptions, GenerationResponse, PullProgress } from './types.js';
+import { OllamaProvider } from './ollama.js';
+import { GeminiProvider } from './gemini.js';
+import { GroqProvider } from './groq.js';
+import { storage } from './storage.js';
 
 export class AIManager {
-  private providers: Map<AIProvider, IAIProvider | OllamaService> = new Map();
-  private currentProvider: AIProvider = 'ollama';
-  private currentModel: string = 'mistral';
-  private ollama: OllamaService;
+  private providers: Map<string, AIProvider> = new Map();
 
   constructor() {
-    this.ollama = new OllamaService();
-    this.providers.set('ollama', this.ollama);
+    this.registerProvider(new OllamaProvider());
+    this.registerProvider(new GeminiProvider());
+    this.registerProvider(new GroqProvider());
+    
+    // Load config from storage
+    this.loadConfig();
   }
 
-  async setProvider(provider: AIProvider, config?: ProviderConfig): Promise<void> {
-    if (provider === 'ollama') {
-      this.providers.set('ollama', this.ollama);
-    } else {
-      try {
-        const providerInstance = createProvider(provider, config);
-        const available = await providerInstance.isAvailable();
-        if (!available) {
-          throw new Error(`Provider ${provider} is not available`);
+  private loadConfig() {
+    const config = storage.load<Record<string, any>>('ai-config', {});
+    this.providers.forEach(provider => {
+        if (config[provider.id]) {
+            provider.configure(config[provider.id]);
         }
-        this.providers.set(provider, providerInstance);
-      } catch (error) {
-        throw new Error(`Failed to set provider ${provider}: ${error}`);
-      }
-    }
-    this.currentProvider = provider;
+    });
   }
 
-  async getAvailableProviders(): Promise<AIProvider[]> {
-    const providers: AIProvider[] = [];
-    const allProviders: AIProvider[] = ['ollama', 'openai', 'anthropic', 'groq', 'lm-studio', 'huggingface'];
-
-    for (const provider of allProviders) {
-      try {
-        const cfg = {};
-        const instance = provider === 'ollama'
-          ? this.ollama
-          : createProvider(provider, cfg);
-        if (await instance.isAvailable()) {
-          providers.push(provider);
-        }
-      } catch {
-        // Provider not available
-      }
+  saveConfig(providerId: string, config: Record<string, any>) {
+    const current = storage.load<Record<string, any>>('ai-config', {});
+    current[providerId] = { ...current[providerId], ...config };
+    storage.save('ai-config', current);
+    
+    const provider = this.providers.get(providerId);
+    if (provider) {
+        provider.configure(config);
     }
-
-    return providers;
   }
 
-  getCurrentProvider(): AIProvider {
-    return this.currentProvider;
+  registerProvider(provider: AIProvider) {
+    this.providers.set(provider.id, provider);
+  }
+
+  getProvider(id: string): AIProvider | undefined {
+    return this.providers.get(id);
   }
 
   async listModels(): Promise<Model[]> {
-    const provider = this.providers.get(this.currentProvider);
-    if (!provider) {
-      throw new Error(`Provider ${this.currentProvider} not initialized`);
+    const allModels: Model[] = [];
+    for (const provider of this.providers.values()) {
+        try {
+            const models = await provider.listModels();
+            allModels.push(...models);
+        } catch (e) {
+            console.warn(`Failed to list models for ${provider.name}`, e);
+        }
     }
-    return await provider.listModels();
+    return allModels;
   }
 
-  setModel(model: string): void {
-    this.currentModel = model;
-  }
-
-  getModel(): string {
-    return this.currentModel;
-  }
-
-  async generate(
-    prompt: string,
-    options?: Partial<GenerationOptions>,
-    onChunk?: (chunk: string) => void
-  ): Promise<GenerationResponse> {
-    const provider = this.providers.get(this.currentProvider);
-    if (!provider) {
-      throw new Error(`Provider ${this.currentProvider} not initialized`);
-    }
-
-    const fullOptions: GenerationOptions = {
-      model: options?.model || this.currentModel,
-      prompt,
-      system: options?.system,
-      stream: options?.stream !== false,
-      temperature: options?.temperature || 0.7,
-      maxTokens: options?.maxTokens || 2048,
-      ...options
-    };
-
-    // Check cache first
-    const cached = responseCache.get(prompt, fullOptions.model, this.currentProvider);
-    if (cached) {
-      return cached;
+  async generate(options: GenerationOptions, onChunk?: (chunk: string) => void, signal?: AbortSignal): Promise<GenerationResponse> {
+    // Detect provider from model object if passed, or find it
+    // The UI should pass `provider` in options, or we infer it
+    let providerId = options.provider;
+    
+    if (!providerId) {
+        // Infer from model object in list
+        // This requires the UI to pass the full model object or we search
+        // For now, let's assume the UI passes provider or we search
+        const models = await this.listModels();
+        const model = models.find(m => m.name === options.model);
+        if (model?.provider) {
+            providerId = model.provider;
+        } else {
+            providerId = 'ollama'; // Default
+        }
     }
 
-    // Track performance
-    const startTime = Date.now();
-    let success = false;
+    const provider = this.providers.get(providerId as string);
+    if (!provider) throw new Error(`Provider ${providerId} not found`);
 
-    try {
-      const response = await provider.generate(fullOptions, onChunk);
-      success = true;
+    return provider.generate(options, onChunk, signal);
+  }
 
-      // Cache the response
-      responseCache.set(prompt, fullOptions.model, this.currentProvider, response);
-
-      // Record metric for provider ranking
-      const metric: RequestMetric = {
-        provider: this.currentProvider,
-        responseTime: Date.now() - startTime,
-        success: true,
-        cost: this.estimateCost(this.currentProvider, response.response.length)
-      };
-      providerRanking.recordMetric(metric);
-
-      return response;
-    } catch (error) {
-      // Record failed metric
-      const metric: RequestMetric = {
-        provider: this.currentProvider,
-        responseTime: Date.now() - startTime,
-        success: false,
-        cost: 0
-      };
-      providerRanking.recordMetric(metric);
-
-      throw error;
+  async checkHealth(): Promise<boolean> {
+    // If ANY provider is healthy, we are healthy
+    for (const provider of this.providers.values()) {
+        if (await provider.checkHealth()) return true;
     }
-  }
-
-  /**
-   * Estimate cost for a generation based on token count
-   */
-  private estimateCost(provider: AIProvider, responseLength: number): number {
-    const tokenCount = Math.ceil(responseLength / 4); // Approximate tokens
-
-    // Cost per 1000 tokens (USD) - approximate pricing
-    const costMap: Record<AIProvider, number> = {
-      'ollama': 0,
-      'openai': 0.002,
-      'anthropic': 0.003,
-      'groq': 0.0001,
-      'lm-studio': 0,
-      'huggingface': 0.001
-    };
-
-    return (tokenCount / 1000) * (costMap[provider] || 0);
-  }
-
-  /**
-   * Get best provider for current use case
-   */
-  async getBestProvider(criteria: 'speed' | 'cost' | 'reliability' | 'balanced' = 'balanced'): Promise<AIProvider> {
-    return providerRanking.getBestProvider(criteria);
-  }
-
-  /**
-   * Get provider performance metrics
-   */
-  getProviderMetrics() {
-    return providerRanking.getRanking();
-  }
-
-  async generateWithRefinement(
-    originalPrompt: string,
-    feedback: string,
-    onChunk?: (chunk: string) => void
-  ): Promise<GenerationResponse> {
-    const refinementPrompt = `
-Original prompt:
-${originalPrompt}
-
-Feedback for refinement:
-${feedback}
-
-Please refine the XML prompt based on the feedback provided.
-    `;
-
-    return await this.generate(refinementPrompt, { stream: true }, onChunk);
-  }
-
-  async generateEnhancement(
-    description: string,
-    onChunk?: (chunk: string) => void
-  ): Promise<GenerationResponse> {
-    const enhancementPrompt = `
-User description:
-${description}
-
-Please enhance this description to be more detailed, professional, and comprehensive. Return ONLY the enhanced description without any preamble.
-    `;
-
-    return await this.generate(enhancementPrompt, { stream: true }, onChunk);
+    return false;
   }
 }
 

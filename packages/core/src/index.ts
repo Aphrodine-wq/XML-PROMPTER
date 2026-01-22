@@ -5,9 +5,30 @@ export * from './types.js';
 export * from './ollama.js';
 export * from './templates.js';
 export * from './history.js';
+export * from './storage.js';
+export * from './promptEngine.js';
+export * from './contextBuilder.js';
+export * from './codeGenerator.js';
+// export * from './ai-provider.js'; // Removed duplicate
+export * from './ai-manager.js';
+export * from './gemini.js';
+export * from './groq.js';
+export * from './vfs.js';
+export * from './projectIndexer.js';
+export * from './configManager.js';
+export * from './voice.js';
+export * from './agents/types.js';
+export * from './agents/planner.js';
+export * from './agents/coder.js';
+export * from './agents/orchestrator.js';
+export * from './plugin-system.js';
+export * from './plugins/python-generator.js';
+
+
+
 
 // AI Provider Management
-export * from './ai-provider.js';
+export { AIProvider as IAIProvider } from './ai-provider.js';
 export * from './ai-manager.js';
 
 // Data & Storage
@@ -30,14 +51,22 @@ export * from './collaboration.js';
 
 // Real-time Features
 export * from './streaming-manager.js';
-export * from './realtime-collaboration.js';
+export { 
+  CollaborationManager as RealtimeCollaborationManager,
+  collaborationManager as realtimeCollaborationManager 
+} from './realtime-collaboration.js';
 
 // Extensibility
 export * from './plugin-system.js';
+export * from './skill-loader.js';
 
 // Intelligence & Search
 export * from './semantic-search.js';
-export * from './predictive-cache.js';
+export {
+  PredictiveCache,
+  predictiveCache,
+  MultiLevelCache
+} from './predictive-cache.js';
 
 // External Integration
 export * from './api-server.js';

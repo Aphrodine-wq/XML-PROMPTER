@@ -124,7 +124,11 @@ export class CollaborationManager {
     lineNumber: number;
     content: string;
   }> {
-    const changes = [];
+    const changes: Array<{
+      type: 'add' | 'remove' | 'modify';
+      lineNumber: number;
+      content: string;
+    }> = [];
     const maxLength = Math.max(original.length, updated.length);
 
     for (let i = 0; i < maxLength; i++) {
@@ -133,19 +137,19 @@ export class CollaborationManager {
 
       if (origLine === undefined) {
         changes.push({
-          type: 'add',
+          type: 'add' as const,
           lineNumber: i + 1,
           content: updatedLine || ''
         });
       } else if (updatedLine === undefined) {
         changes.push({
-          type: 'remove',
+          type: 'remove' as const,
           lineNumber: i + 1,
           content: origLine
         });
       } else if (origLine !== updatedLine) {
         changes.push({
-          type: 'modify',
+          type: 'modify' as const,
           lineNumber: i + 1,
           content: updatedLine
         });

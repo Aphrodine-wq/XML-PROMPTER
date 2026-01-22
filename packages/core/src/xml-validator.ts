@@ -1,4 +1,4 @@
-import { parse, validate } from 'fast-xml-parser';
+import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -60,10 +60,11 @@ export class XMLValidator {
 
     // Try to parse XML
     try {
-      const parsed = parse(xml, {
+      const parser = new XMLParser({
         ignoreAttributes: false,
         parseTagValue: false
       });
+      const parsed = parser.parse(xml);
 
       if (!parsed) {
         errors.push('Failed to parse XML');
@@ -223,8 +224,11 @@ export class XMLValidator {
    */
   static format(xml: string, indent: number = 2): string {
     try {
-      const parsed = parse(xml);
-      const builder = new (require('fast-xml-parser').XMLBuilder)({
+      const parser = new XMLParser({
+        ignoreAttributes: false
+      });
+      const parsed = parser.parse(xml);
+      const builder = new XMLBuilder({
         ignoreAttributes: false,
         format: true,
         indentBy: ' '.repeat(indent)

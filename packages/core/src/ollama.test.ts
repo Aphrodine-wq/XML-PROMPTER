@@ -23,7 +23,7 @@ describe('OllamaService', () => {
     const models = await ollama.listModels();
     expect(models).toHaveLength(1);
     expect(models[0].name).toBe('llama2');
-    expect(global.fetch).toHaveBeenCalledWith('http://localhost:11434/api/tags');
+    expect(global.fetch).toHaveBeenCalledWith('http://localhost:11434/api/tags', expect.anything());
   });
 
   it('should handle list models error', async () => {

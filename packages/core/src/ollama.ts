@@ -1,22 +1,73 @@
+import { AIProvider } from './ai-provider.js';
 import { Model, GenerationOptions, GenerationResponse, PullProgress } from './types.js';
 
 const OLLAMA_HOST = 'http://localhost:11434';
 
-export class OllamaService {
+interface ServiceConfig {
+  baseUrl?: string;
+  timeout?: number;
+  retries?: number;
+}
+
+export class OllamaProvider implements AIProvider {
+  id = 'ollama';
+  name = 'Ollama (Local)';
+  
+  private config: ServiceConfig;
+
+  constructor(config: ServiceConfig = {}) {
+    this.config = {
+      baseUrl: OLLAMA_HOST,
+      timeout: 30000,
+      retries: 3,
+      ...config
+    };
+  }
+
+  configure(config: Record<string, any>): void {
+    this.config = { ...this.config, ...config };
+  }
+
+  private async fetchWithRetry(url: string, options: RequestInit, retries = this.config.retries!): Promise<Response> {
+    try {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), this.config.timeout);
+      
+      const response = await fetch(url, {
+        ...options,
+        signal: options.signal || controller.signal,
+      });
+      
+      clearTimeout(id);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response;
+    } catch (error: any) {
+      if (retries > 0 && error.name !== 'AbortError') {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return this.fetchWithRetry(url, options, retries - 1);
+      }
+      throw error;
+    }
+  }
+
   async listModels(): Promise<Model[]> {
     try {
-      const response = await fetch(`${OLLAMA_HOST}/api/tags`);
-      if (!response.ok) throw new Error('Failed to fetch models');
+      const response = await this.fetchWithRetry(`${this.config.baseUrl}/api/tags`, {
+        method: 'GET'
+      });
       const data = await response.json() as { models: Model[] };
-      return data.models;
+      return data.models.map(m => ({ ...m, provider: 'ollama' }));
     } catch (error) {
-      console.error('Error listing models:', error);
+      // console.error('Error listing models:', error);
       return [];
     }
   }
 
   async pull(model: string, onProgress?: (progress: PullProgress) => void): Promise<void> {
-    const response = await fetch(`${OLLAMA_HOST}/api/pull`, {
+    const response = await fetch(`${this.config.baseUrl}/api/pull`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: model, stream: true }),
@@ -51,11 +102,16 @@ export class OllamaService {
     }
   }
 
-  async generate(options: GenerationOptions, onChunk?: (chunk: string) => void): Promise<GenerationResponse> {
-    const response = await fetch(`${OLLAMA_HOST}/api/generate`, {
+  async generate(
+    options: GenerationOptions, 
+    onChunk?: (chunk: string) => void, 
+    signal?: AbortSignal
+  ): Promise<GenerationResponse> {
+    const response = await fetch(`${this.config.baseUrl}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(options),
+      signal
     });
 
     if (!response.ok) throw new Error('Failed to generate response');
@@ -66,27 +122,33 @@ export class OllamaService {
       let finalResponse: GenerationResponse | null = null;
       let buffer = '';
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-        const text = decoder.decode(value, { stream: true });
-        buffer += text;
-        
-        const lines = buffer.split('\n');
-        // Keep the last line if it's incomplete (doesn't end with newline)
-        buffer = lines.pop() || '';
+          const text = decoder.decode(value, { stream: true });
+          buffer += text;
+          
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
 
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const json = JSON.parse(line) as GenerationResponse;
-            if (onChunk) onChunk(json.response);
-            if (json.done) finalResponse = json;
-          } catch (e) {
-            console.error('Error parsing chunk:', e);
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            try {
+              const json = JSON.parse(line) as GenerationResponse;
+              if (onChunk) onChunk(json.response);
+              if (json.done) finalResponse = json;
+            } catch (e) {
+              console.error('Error parsing chunk:', e);
+            }
           }
         }
+      } catch (e: any) {
+        if (e.name === 'AbortError') {
+          throw new Error('Generation cancelled');
+        }
+        throw e;
       }
 
       // Process remaining buffer
@@ -106,6 +168,16 @@ export class OllamaService {
       return await response.json() as GenerationResponse;
     }
   }
+
+  async checkHealth(): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.config.baseUrl}/api/tags`); // Simple health check
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }
 }
 
-export const ollama = new OllamaService();
+// Backward compatibility
+export const ollama = new OllamaProvider();

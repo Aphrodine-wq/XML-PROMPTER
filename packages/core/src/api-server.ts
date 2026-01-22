@@ -454,7 +454,7 @@ export class APIServer {
 
       if (req.method === 'GET') {
         const cacheKey = this.getCacheKey(req);
-        responsePromise = route.handler(req);
+        responsePromise = Promise.resolve(route.handler(req));
         this.pendingRequests.set(cacheKey, responsePromise);
 
         try {
@@ -510,7 +510,7 @@ export class APIServer {
    */
   private authenticate(req: APIRequest): boolean {
     const apiKey = req.headers['x-api-key'];
-    return apiKey && this.config.apiKeys.includes(apiKey);
+    return !!apiKey && this.config.apiKeys.includes(apiKey);
   }
 
   /**

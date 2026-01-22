@@ -13,19 +13,12 @@
  * @module compression
  */
 
-import { gzip, gunzip, brotliCompress, brotliDecompress } from 'zlib';
-import { promisify } from 'util';
-import { Worker } from 'worker_threads';
-import { cpus } from 'os';
-
-const gzipAsync = promisify(gzip);
-const gunzipAsync = promisify(gunzip);
-const brotliCompressAsync = promisify(brotliCompress);
-const brotliDecompressAsync = promisify(brotliDecompress);
+// Environment detection
+const isBrowser = typeof window !== 'undefined';
 
 export type CompressionAlgorithm = 'gzip' | 'brotli' | 'none';
 
-// Threshold for using worker threads (50KB)
+// Threshold for using worker threads (50KB) - disabled in browser
 const WORKER_THRESHOLD = 50 * 1024;
 
 export interface CompressionOptions {
@@ -71,9 +64,9 @@ export class CompressionManager {
     },
   };
 
-  // Worker pool for heavy compression (prevents event loop blocking)
-  private workerPool: Worker[] = [];
-  private readonly MAX_WORKERS = Math.min(cpus().length, 4);
+  // Worker pool for heavy compression (prevents event loop blocking) - disabled in browser
+  private workerPool: any[] = [];
+  private readonly MAX_WORKERS = isBrowser ? 0 : 4;
   private workerQueue: Array<{
     resolve: (result: Buffer) => void;
     reject: (error: Error) => void;
@@ -148,22 +141,37 @@ export class CompressionManager {
     algorithm: CompressionAlgorithm,
     level: number
   ): Promise<Buffer> {
-    switch (algorithm) {
-      case 'gzip':
-        return await gzipAsync(buffer, { level });
+    // In browser, return uncompressed (compression not available)
+    if (isBrowser) {
+      return buffer;
+    }
 
-      case 'brotli':
-        return await brotliCompressAsync(buffer, {
-          params: {
-            [11]: level, // BROTLI_PARAM_QUALITY
-          },
-        });
+    try {
+      const zlib = await import('zlib');
+      const util = await import('util');
 
-      case 'none':
-        return buffer;
+      switch (algorithm) {
+        case 'gzip':
+          const gzipAsync = util.promisify(zlib.gzip);
+          return await gzipAsync(buffer, { level });
 
-      default:
-        throw new Error(`Unknown compression algorithm: ${algorithm}`);
+        case 'brotli':
+          const brotliCompressAsync = util.promisify(zlib.brotliCompress);
+          return await brotliCompressAsync(buffer, {
+            params: {
+              [11]: level, // BROTLI_PARAM_QUALITY
+            },
+          });
+
+        case 'none':
+          return buffer;
+
+        default:
+          throw new Error(`Unknown compression algorithm: ${algorithm}`);
+      }
+    } catch (error) {
+      // If zlib not available, return uncompressed
+      return buffer;
     }
   }
 
@@ -231,19 +239,29 @@ export class CompressionManager {
       algo = dataOrCompressed.algorithm;
     }
 
-    if (algo === 'none') {
+    if (algo === 'none' || isBrowser) {
       return data;
     }
 
-    switch (algo) {
-      case 'gzip':
-        return await gunzipAsync(data);
+    try {
+      const zlib = await import('zlib');
+      const util = await import('util');
 
-      case 'brotli':
-        return await brotliDecompressAsync(data);
+      switch (algo) {
+        case 'gzip':
+          const gunzipAsync = util.promisify(zlib.gunzip);
+          return await gunzipAsync(data);
 
-      default:
-        throw new Error(`Unknown compression algorithm: ${algo}`);
+        case 'brotli':
+          const brotliDecompressAsync = util.promisify(zlib.brotliDecompress);
+          return await brotliDecompressAsync(data);
+
+        default:
+          throw new Error(`Unknown compression algorithm: ${algo}`);
+      }
+    } catch (error) {
+      // If zlib not available, return data as-is
+      return data;
     }
   }
 
@@ -435,7 +453,7 @@ export class StorageOptimizer {
       }
     }
 
-    const decompressed = await this.compression.decompress(buffer, metadata.algorithm);
+    const decompressed = await this.compression.decompress(buffer, metadata.algorithm || 'gzip');
 
     if (type === 'json') {
       return JSON.parse(decompressed.toString('utf-8'));

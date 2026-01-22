@@ -1,4 +1,4 @@
-export type AIProvider = 'ollama' | 'openai' | 'anthropic' | 'groq' | 'lm-studio' | 'huggingface';
+export type AIProvider = 'ollama' | 'openai' | 'anthropic' | 'groq' | 'lm-studio' | 'huggingface' | 'google';
 
 export interface Model {
   name: string;
@@ -26,6 +26,7 @@ export interface GenerationOptions {
   provider?: AIProvider;
   temperature?: number;
   maxTokens?: number;
+  images?: string[]; // Base64 encoded images
 }
 
 export interface GenerationResponse {
@@ -53,7 +54,7 @@ export interface PullProgress {
 
 // Provider Configuration
 export interface ProviderConfig {
-  provider: AIProvider;
+  provider?: AIProvider;
   apiKey?: string;
   baseUrl?: string;
   timeout?: number;

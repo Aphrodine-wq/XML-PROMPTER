@@ -509,7 +509,12 @@ export class MultiLevelCache<T = any> {
   private l2Cache: Map<string, string> = new Map(); // Simulated disk cache
   private l2MaxSize = 1000;
 
-  constructor(l1Options?: Parameters<typeof PredictiveCache>[0]) {
+  constructor(l1Options?: {
+    maxSize?: number;
+    defaultTTL?: number;
+    prefetchThreshold?: number;
+    prefetchEnabled?: boolean;
+  }) {
     this.l1Cache = new PredictiveCache<T>(l1Options);
   }
 
@@ -525,11 +530,11 @@ export class MultiLevelCache<T = any> {
 
     // Try L2 (disk)
     const l2Value = this.l2Cache.get(key);
-    if (l2Value) {
+    if (l2Value !== undefined) {
       // Promote to L1
-      value = JSON.parse(l2Value) as T;
-      await this.l1Cache.set(key, value);
-      return value;
+      const parsed = JSON.parse(l2Value) as T;
+      await this.l1Cache.set(key, parsed);
+      return parsed;
     }
 
     return undefined;
@@ -546,7 +551,9 @@ export class MultiLevelCache<T = any> {
     if (this.l2Cache.size >= this.l2MaxSize) {
       // Evict oldest
       const firstKey = this.l2Cache.keys().next().value;
-      this.l2Cache.delete(firstKey);
+      if (firstKey !== undefined) {
+        this.l2Cache.delete(firstKey);
+      }
     }
     this.l2Cache.set(key, JSON.stringify(value));
   }
