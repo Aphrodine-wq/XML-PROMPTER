@@ -56,7 +56,8 @@ export class BatchProcessor {
   async executeBatch(
     jobId: string,
     options?: Partial<GenerationOptions>,
-    onProgress?: (progress: { completed: number; total: number; current: string }) => void
+    onProgress?: (progress: { completed: number; total: number; current: string }) => void,
+    parallelCount: number = 3
   ): Promise<BatchJob | null> {
     const job = this.jobs.get(jobId);
     if (!job) return null;
@@ -70,30 +71,35 @@ export class BatchProcessor {
     job.updatedAt = new Date().toISOString();
 
     try {
-      for (let i = 0; i < job.items.length; i++) {
-        const item = job.items[i];
+      // Process items in parallel batches
+      const promises: Promise<void>[] = [];
 
-        if (onProgress) {
-          onProgress({
-            completed: i,
-            total: job.items.length,
-            current: item.prompt.substring(0, 50)
-          });
-        }
+      for (let i = 0; i < job.items.length; i += parallelCount) {
+        const batch = job.items.slice(i, i + parallelCount);
 
-        try {
-          const result = await aiManager.generate(item.prompt, options);
-          item.status = 'completed';
-          item.result = result.response;
-          job.completedItems++;
-        } catch (error) {
-          item.status = 'failed';
-          item.error = error instanceof Error ? error.message : 'Unknown error';
-          job.failedItems++;
-        }
+        const batchPromises = batch.map(async (item) => {
+          try {
+            const result = await aiManager.generate(item.prompt, options);
+            item.status = 'completed';
+            item.result = result.response;
+            job.completedItems++;
+          } catch (error) {
+            item.status = 'failed';
+            item.error = error instanceof Error ? error.message : 'Unknown error';
+            job.failedItems++;
+          }
 
-        item.status === 'completed' ? job.completedItems++ : job.failedItems++;
-        job.updatedAt = new Date().toISOString();
+          job.updatedAt = new Date().toISOString();
+          if (onProgress) {
+            onProgress({
+              completed: job.completedItems + job.failedItems,
+              total: job.items.length,
+              current: item.prompt.substring(0, 50)
+            });
+          }
+        });
+
+        await Promise.all(batchPromises);
         await database.updateBatchJob(jobId, job);
       }
 

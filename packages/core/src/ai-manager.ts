@@ -1,6 +1,8 @@
 import { GenerationOptions, GenerationResponse, Model, AIProvider, ProviderConfig } from './types.js';
 import { createProvider, IAIProvider } from './ai-provider.js';
 import { OllamaService } from './ollama.js';
+import { responseCache } from './response-cache.js';
+import { providerRanking, RequestMetric } from './provider-ranking.js';
 
 export class AIManager {
   private providers: Map<AIProvider, IAIProvider | OllamaService> = new Map();
@@ -92,7 +94,78 @@ export class AIManager {
       ...options
     };
 
-    return await provider.generate(fullOptions, onChunk);
+    // Check cache first
+    const cached = responseCache.get(prompt, fullOptions.model, this.currentProvider);
+    if (cached) {
+      return cached;
+    }
+
+    // Track performance
+    const startTime = Date.now();
+    let success = false;
+
+    try {
+      const response = await provider.generate(fullOptions, onChunk);
+      success = true;
+
+      // Cache the response
+      responseCache.set(prompt, fullOptions.model, this.currentProvider, response);
+
+      // Record metric for provider ranking
+      const metric: RequestMetric = {
+        provider: this.currentProvider,
+        responseTime: Date.now() - startTime,
+        success: true,
+        cost: this.estimateCost(this.currentProvider, response.response.length)
+      };
+      providerRanking.recordMetric(metric);
+
+      return response;
+    } catch (error) {
+      // Record failed metric
+      const metric: RequestMetric = {
+        provider: this.currentProvider,
+        responseTime: Date.now() - startTime,
+        success: false,
+        cost: 0
+      };
+      providerRanking.recordMetric(metric);
+
+      throw error;
+    }
+  }
+
+  /**
+   * Estimate cost for a generation based on token count
+   */
+  private estimateCost(provider: AIProvider, responseLength: number): number {
+    const tokenCount = Math.ceil(responseLength / 4); // Approximate tokens
+
+    // Cost per 1000 tokens (USD) - approximate pricing
+    const costMap: Record<AIProvider, number> = {
+      'ollama': 0,
+      'openai': 0.002,
+      'anthropic': 0.003,
+      'groq': 0.0001,
+      'lm-studio': 0,
+      'huggingface': 0.001
+    };
+
+    return (tokenCount / 1000) * (costMap[provider] || 0);
+  }
+
+  /**
+   * Get best provider for current use case
+   */
+  async getBestProvider(criteria: 'speed' | 'cost' | 'reliability' | 'balanced' = 'balanced'): Promise<AIProvider> {
+    return providerRanking.getBestProvider(criteria);
+  }
+
+  /**
+   * Get provider performance metrics
+   */
+  getProviderMetrics() {
+    return providerRanking.getRanking();
   }
 
   async generateWithRefinement(
