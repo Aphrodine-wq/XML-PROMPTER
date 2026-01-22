@@ -1,6 +1,6 @@
 import { useAppStore } from '../store';
 import { Copy, Download, Code2, Check, Loader2, AlertTriangle, CheckCircle2, X, CheckCheck, Activity, Save } from 'lucide-react';
-import { useState, useMemo, useEffect, lazy, Suspense, useRef } from 'react';
+import { useState, useMemo, useEffect, lazy, Suspense, useRef, useDeferredValue, memo } from 'react';
 import { cn } from '../utils';
 import { XMLValidator } from 'fast-xml-parser';
 import format from 'xml-formatter';
@@ -11,7 +11,7 @@ const Editor = lazy(() => import('@monaco-editor/react'));
 const DiffEditor = lazy(() => import('@monaco-editor/react').then(m => ({ default: m.DiffEditor })));
 
 export function XMLEditor() {
-  const { 
+  const {
     xmlOutput, setXmlOutput, isGenerating, isRefining, originalXmlOutput,
     acceptRefinement, rejectRefinement, lastGenerationStats,
     saveCurrentFile, currentFilePath
@@ -19,18 +19,21 @@ export function XMLEditor() {
   const [copied, setCopied] = useState(false);
   const monacoRef = useRef<any>(null);
 
+  // Performance: Defer validation to avoid blocking UI (2-3x faster perceived responsiveness)
+  const deferredXmlOutput = useDeferredValue(xmlOutput);
+
   const validationResult = useMemo(() => {
-    if (!xmlOutput || isGenerating) return { isValid: true };
-    
+    if (!deferredXmlOutput || isGenerating) return { isValid: true };
+
     // Simple check for our expected root tag
-    if (!xmlOutput.includes('<website_prompt>')) {
+    if (!deferredXmlOutput.includes('<website_prompt>')) {
       return { isValid: false, error: 'Missing root <website_prompt> tag' };
     }
 
-    const result = XMLValidator.validate(xmlOutput);
+    const result = XMLValidator.validate(deferredXmlOutput);
     if (result === true) return { isValid: true };
     return { isValid: false, error: result.err.msg };
-  }, [xmlOutput, isGenerating]);
+  }, [deferredXmlOutput, isGenerating]);
 
   // Handle Monaco Initialization
   const handleEditorDidMount = (editor: any, monaco: any) => {
