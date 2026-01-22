@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
 import { useAppStore } from '../../store';
-import { parseXMLToTree } from './xmlParser';
+import { parseXMLToTree, XMLNode } from './xmlParser';
 import { TreeNode } from './TreeNode';
-import { ScrollArea } from '@radix-ui/react-scroll-area';
 import { FileJson, AlertCircle } from 'lucide-react';
 
 export function XMLTreeVisualizer() {
@@ -13,12 +12,17 @@ export function XMLTreeVisualizer() {
     return parseXMLToTree(xmlOutput);
   }, [xmlOutput]);
 
-  const handleNodeSelect = (node: any) => {
-    // In a real implementation, we would map the node back to a line number
-    // using a parser that supports CST (Concrete Syntax Tree) or location tracking.
-    // fast-xml-parser's preserveOrder mode is complex for line mapping.
-    // For now, we'll just log or implement a simple text search scroll later.
-    console.log("Selected", node);
+  const handleNodeSelect = (node: XMLNode) => {
+    // 10x Feature: Highlight in Monaco Editor
+    // We dispatch a custom event that XMLEditor listens to
+    // Since we don't have direct ref access across components easily without context
+    const event = new CustomEvent('xml-node-select', { 
+      detail: { 
+        tagName: node.name, 
+        content: node.content 
+      } 
+    });
+    window.dispatchEvent(event);
   };
 
   if (!xmlOutput) {

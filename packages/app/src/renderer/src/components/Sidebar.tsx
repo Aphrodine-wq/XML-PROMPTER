@@ -1,6 +1,6 @@
 import { 
   Folder, History, Settings, FileCode, Plus, ChevronLeft, ChevronRight, LogOut, User,
-  Layout, Type, Image, Code, Files, Search
+  Layout, Type, Image, Code, Files, Search, Wand2
 } from 'lucide-react';
 import { cn } from '../utils';
 import { useAppStore } from '../store';
@@ -12,6 +12,8 @@ import { toast } from 'sonner';
 import * as Dialog from '@radix-ui/react-dialog';
 import { FileExplorer } from './explorer/FileExplorer';
 import { SearchSidebar } from './search/SearchSidebar';
+import { SkillsManager } from './skills/SkillsManager';
+import { SettingsDialog } from './SettingsDialog';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -21,8 +23,9 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { templates, history, loadTemplate, loadHistory, logout, user, setXmlOutput, xmlOutput, snippets, addSnippet } = useAppStore();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'files' | 'snippets' | 'project' | 'search'>('project');
+  const [activeTab, setActiveTab] = useState<'files' | 'snippets' | 'project' | 'search' | 'skills'>('project');
   const [snippetDialogOpen, setSnippetDialogOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [currentSnippet, setCurrentSnippet] = useState<{ content: string; variables: string[] } | null>(null);
   const [variableValues, setVariableValues] = useState<Record<string, string>>({});
 
@@ -108,12 +111,12 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
         {/* Tab Switcher (New) */}
         {!collapsed && (
-          <div className="flex p-2 gap-1 border-b border-slate-800">
+          <div className="flex p-2 gap-1 border-b border-slate-800/50">
              <button 
               onClick={() => setActiveTab('project')}
               className={cn(
                 "flex-1 py-1.5 text-xs font-medium rounded transition-colors flex items-center justify-center gap-2",
-                activeTab === 'project' ? "bg-slate-800 text-slate-200" : "hover:bg-slate-900 text-slate-500"
+                activeTab === 'project' ? "bg-slate-800/80 text-slate-200 shadow-sm" : "hover:bg-slate-800/50 text-slate-500"
               )}
               title="Project Explorer"
             >
@@ -237,7 +240,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
           <div className="shrink-0 border-t border-slate-800 mt-2">
             {!collapsed && <div className="px-4 mt-2 py-2 text-xs font-semibold uppercase text-slate-600">App</div>}
-            <NavItem icon={<Settings className="w-4 h-4" />} label="Settings" collapsed={collapsed} />
+            <NavItem icon={<Settings className="w-4 h-4" />} label="Settings" collapsed={collapsed} onClick={() => setSettingsOpen(true)} />
           </div>
         </div>
 
@@ -302,6 +305,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
+
+      {/* Settings Dialog */}
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </>
   );
 }

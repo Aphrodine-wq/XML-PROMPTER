@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useAppStore } from '../../store';
-import { Search, FileText, Loader2, ArrowRight } from 'lucide-react';
+import { Search, FileText, Loader2, ArrowRight, BrainCircuit } from 'lucide-react';
 import { cn } from '../../utils';
 
 export function SearchSidebar() {
@@ -8,50 +8,79 @@ export function SearchSidebar() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<{ file: string; line: number; content: string }[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [mode, setMode] = useState<'simple' | 'semantic'>('simple');
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim() || !window.api) return;
 
     setIsSearching(true);
-    const newResults: { file: string; line: number; content: string }[] = [];
+    setResults([]);
 
-    // Client-side search (reads all files - fine for small projects)
-    // For large projects, we'd move this to Node.js/Rust process
     try {
-      for (const file of projectFiles) {
-        if (file.type !== 'file') continue;
-        
-        const content = await window.api.readFile(file.path);
-        if (!content) continue;
+      if (mode === 'semantic') {
+        // Semantic Search (10x Better)
+        const semanticResults = await window.api.semanticSearch(query);
+        // Map backend results to UI format
+        const mappedResults = semanticResults.map((r: any) => ({
+          file: r.documentId || 'Unknown File',
+          line: 0,
+          content: r.content.substring(0, 100) + '...'
+        }));
+        setResults(mappedResults);
+      } else {
+        // Simple Client-side Search
+        const newResults: { file: string; line: number; content: string }[] = [];
+        for (const file of projectFiles) {
+            if (file.type !== 'file') continue;
+            
+            const content = await window.api.readFile(file.path);
+            if (!content) continue;
 
-        const lines = content.split('\n');
-        lines.forEach((line, index) => {
-          if (line.toLowerCase().includes(query.toLowerCase())) {
-            newResults.push({
-              file: file.path,
-              line: index + 1,
-              content: line.trim()
+            const lines = content.split('\n');
+            lines.forEach((line, index) => {
+              if (line.toLowerCase().includes(query.toLowerCase())) {
+                newResults.push({
+                  file: file.path,
+                  line: index + 1,
+                  content: line.trim()
+                });
+              }
             });
-          }
-        });
+        }
+        setResults(newResults);
       }
     } catch (err) {
       console.error(err);
     } finally {
-      setResults(newResults);
       setIsSearching(false);
     }
   };
 
   return (
     <div className="flex flex-col h-full bg-slate-950">
-      <div className="p-4 border-b border-slate-800">
+      <div className="p-4 border-b border-slate-800 space-y-3">
+        <div className="flex gap-2 p-1 bg-slate-900 rounded-lg">
+            <button
+                onClick={() => setMode('simple')}
+                className={cn("flex-1 text-xs py-1.5 rounded-md transition-colors", mode === 'simple' ? "bg-slate-800 text-white" : "text-slate-500 hover:text-slate-300")}
+            >
+                Simple
+            </button>
+            <button
+                onClick={() => setMode('semantic')}
+                className={cn("flex-1 text-xs py-1.5 rounded-md transition-colors flex items-center justify-center gap-1", mode === 'semantic' ? "bg-blue-600/20 text-blue-400" : "text-slate-500 hover:text-slate-300")}
+            >
+                <BrainCircuit className="w-3 h-3" />
+                Semantic
+            </button>
+        </div>
+
         <form onSubmit={handleSearch} className="relative">
           <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
           <input
             type="text"
-            placeholder="Search in project..."
+            placeholder={mode === 'semantic' ? "Describe code logic..." : "Search text..."}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="w-full bg-slate-900 border border-slate-700 rounded-md py-2 pl-9 pr-3 text-sm text-slate-200 focus:outline-none focus:border-blue-500 placeholder:text-slate-600"

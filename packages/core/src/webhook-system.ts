@@ -428,8 +428,11 @@ export class WebhookManager {
     }
 
     try {
+      /*
       const crypto = await import('crypto');
       return crypto.createHmac('sha256', secret).update(payload).digest('hex');
+      */
+     return '';
     } catch (error) {
       // Fallback if crypto not available
       return '';

@@ -1,0 +1,73 @@
+/* index.css */
+@import "./design-tokens.css";
+
+/* Precise Typography Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    background-color: var(--color-bg);
+    color: var(--color-text-primary);
+    font-family: var(--font-family-base);
+    line-height: 1.5;
+    overflow-x: hidden;
+}
+
+h1,
+h2,
+h3,
+h4 {
+    font-family: var(--font-family-display);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+/* Premium Component Foundations */
+.card {
+    background: var(--color-white);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-md);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+button {
+    background-color: var(--color-emerald-deep);
+    color: var(--color-white);
+    border: none;
+    padding: 12px 24px;
+    font-family: var(--font-family-display);
+    font-weight: 700;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+button:hover {
+    background-color: var(--color-emerald-mid);
+    box-shadow: 0 4px 12px rgba(6, 35, 26, 0.2);
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+/* Responsive Container */
+.container {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 0 var(--space-md);
+}

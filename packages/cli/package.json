@@ -10,12 +10,16 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@types/inquirer": "^9.0.9",
     "@xmlpg/core": "*",
+    "boxen": "^8.0.1",
+    "chalk": "^5.3.0",
     "commander": "^11.0.0",
-    "chalk": "^5.3.0"
+    "inquirer": "^13.2.1",
+    "ora": "^9.1.0"
   },
   "devDependencies": {
-    "typescript": "^5.3.0",
-    "@types/node": "^20.0.0"
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0"
   }
 }

@@ -1,0 +1,40 @@
+/* design-tokens.css */
+:root {
+    /* High-End Palette: Emerald & Snow */
+    --color-white: #FFFFFF;
+    --color-emerald-deep: #06231A;
+    /* Very Dark Green */
+    --color-emerald-mid: #0E3D2E;
+    --color-emerald-light: #1A5C47;
+
+    --color-bg: var(--color-white);
+    --color-surface: var(--color-white);
+    --color-text-primary: var(--color-emerald-deep);
+    --color-text-muted: #556B61;
+    --color-border: #E0E7E4;
+
+    --color-accent: var(--color-emerald-deep);
+    --color-accent-contrast: var(--color-white);
+
+    /* Spacing: Precise and Spacious */
+    --space-xxs: 4px;
+    --space-xs: 8px;
+    --space-sm: 16px;
+    --space-md: 24px;
+    --space-lg: 48px;
+    --space-xl: 80px;
+
+    /* Typography: High-End Serif/Sans Mix */
+    --font-family-display: 'Outfit', sans-serif;
+    --font-family-base: 'Inter', sans-serif;
+
+    /* Shadows: Soft but authoritative (No transparency required in values) */
+    --shadow-sm: 0 2px 8px rgba(6, 35, 26, 0.05);
+    --shadow-md: 0 8px 24px rgba(6, 35, 26, 0.08);
+    --shadow-lg: 0 16px 48px rgba(6, 35, 26, 0.12);
+
+    /* Radius: Sharp & Subtle */
+    --radius-sm: 4px;
+    --radius-md: 12px;
+    --radius-lg: 24px;
+}

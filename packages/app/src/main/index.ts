@@ -162,6 +162,54 @@ app.whenReady().then(() => {
     }
   });
 
+  // Project Config & VFS Handlers
+  ipcMain.handle('ensure-project-config', async (_, projectPath: string) => {
+    try {
+      const configDir = path.join(projectPath, '.xmlpg');
+      const configFile = path.join(configDir, 'config.json');
+      
+      await fs.mkdir(configDir, { recursive: true });
+      
+      try {
+        await fs.access(configFile);
+      } catch {
+        // Create default config if not exists
+        const defaultConfig = {
+          name: path.basename(projectPath),
+          version: '1.0.0',
+          created_at: new Date().toISOString()
+        };
+        await fs.writeFile(configFile, JSON.stringify(defaultConfig, null, 2), 'utf-8');
+      }
+      return true;
+    } catch (e) {
+      console.error('Failed to ensure project config', e);
+      return false;
+    }
+  });
+
+  ipcMain.handle('create-directory', async (_, dirPath: string) => {
+    try {
+      await fs.mkdir(dirPath, { recursive: true });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  });
+
+  ipcMain.handle('write-project-file', async (_, filePath: string, content: string) => {
+    try {
+      // Ensure dir exists first
+      const dir = path.dirname(filePath);
+      await fs.mkdir(dir, { recursive: true });
+      await fs.writeFile(filePath, content, 'utf-8');
+      return true;
+    } catch (e) {
+      console.error('Failed to write project file', e);
+      return false;
+    }
+  });
+
   // AI Provider Handlers
   ipcMain.handle('get-available-providers', async () => {
     const { aiManager } = await import('@xmlpg/core');
@@ -296,6 +344,43 @@ app.whenReady().then(() => {
       return await collaborationManager.getDiff(promptId, v1, v2);
     } catch (e) {
       return null;
+    }
+  });
+
+  // Skill System Handlers
+  ipcMain.handle('load-skills', async (_, customPath?: string) => {
+    const { skillLoader } = await import('@xmlpg/core');
+    try {
+      const documentsPath = app.getPath('documents');
+      const skillsPath = customPath || path.join(documentsPath, 'xml-prompter-skills');
+      
+      skillLoader.setSkillsDir(skillsPath);
+      await skillLoader.loadSkills();
+      return { success: true, path: skillsPath };
+    } catch (e: any) {
+      console.error('Failed to load skills', e);
+      return { success: false, error: e.message };
+    }
+  });
+
+  // Semantic Search Handlers
+  ipcMain.handle('semantic-search', async (_, query: string, options?: any) => {
+    const { semanticSearch } = await import('@xmlpg/core');
+    try {
+      return await semanticSearch.search(query, options);
+    } catch (e: any) {
+      console.error('Semantic search failed', e);
+      return [];
+    }
+  });
+
+  ipcMain.handle('index-document', async (_, id: string, content: string, metadata?: any) => {
+    const { semanticSearch } = await import('@xmlpg/core');
+    try {
+      await semanticSearch.indexDocument(id, content, metadata);
+      return true;
+    } catch (e) {
+      return false;
     }
   });
 

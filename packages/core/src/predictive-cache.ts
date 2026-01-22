@@ -460,7 +460,7 @@ export class PredictiveCache<T = any> {
    * Estimate size of value
    */
   private estimateSize(value: any): number {
-    if (Buffer.isBuffer(value)) {
+    if (typeof Buffer !== 'undefined' && Buffer.isBuffer(value)) {
       return value.length;
     }
 

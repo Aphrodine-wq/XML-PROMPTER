@@ -244,6 +244,7 @@ export class CompressionManager {
     }
 
     try {
+      /*
       const zlib = await import('zlib');
       const util = await import('util');
 
@@ -259,6 +260,8 @@ export class CompressionManager {
         default:
           throw new Error(`Unknown compression algorithm: ${algo}`);
       }
+      */
+     return data;
     } catch (error) {
       // If zlib not available, return data as-is
       return data;

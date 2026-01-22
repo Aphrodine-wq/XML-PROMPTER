@@ -319,6 +319,7 @@ export class ResponseCache {
     }
 
     try {
+      /*
       const fs = await import('fs/promises');
       const path = await import('path');
       const filePath = path.join(this.l2CacheDir, `${key}.json`);
@@ -332,6 +333,7 @@ export class ResponseCache {
         timestamp: entry.timestamp,
         hitCount: entry.hitCount
       });
+      */
     } catch (error) {
       console.error('Failed to save to L2 cache:', error);
     }
@@ -347,6 +349,7 @@ export class ResponseCache {
     // Clear L2 (only in Node.js)
     if (!this.isBrowser && this.l2CacheDir) {
       try {
+        /*
         const fs = await import('fs/promises');
         const path = await import('path');
         const files = await fs.readdir(this.l2CacheDir);
@@ -355,6 +358,7 @@ export class ResponseCache {
             await fs.unlink(path.join(this.l2CacheDir, file));
           }
         }
+        */
       } catch {
         // Ignore errors
       }

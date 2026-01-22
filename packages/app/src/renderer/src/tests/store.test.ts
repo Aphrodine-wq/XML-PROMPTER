@@ -2,15 +2,35 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useAppStore } from '../store';
 import { ollama } from '@xmlpg/core';
 
+// Mock lodash throttle to execute immediately
+vi.mock('lodash', () => ({
+  throttle: (fn: any) => fn
+}));
+
+// Mock Window API
+global.window = {
+  api: {
+    saveHistory: vi.fn(),
+    readHistory: vi.fn(),
+    readTemplates: vi.fn(),
+    saveSnippets: vi.fn(),
+    readSnippets: vi.fn(),
+  },
+  dispatchEvent: vi.fn(),
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
+} as any;
+
 // Mock Ollama Core
 vi.mock('@xmlpg/core', async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual: any = await importOriginal();
   return {
     ...actual,
     ollama: {
       listModels: vi.fn(),
       generate: vi.fn(),
-      pull: vi.fn()
+      pull: vi.fn(),
+      checkHealth: vi.fn().mockResolvedValue(true)
     },
     historyManager: {
       getHistory: vi.fn(() => []),
@@ -29,7 +49,9 @@ describe('App Store Logic', () => {
       prompt: '',
       xmlOutput: '',
       models: [],
-      isGenerating: false
+      isGenerating: false,
+      personas: [{ id: 'default', systemPrompt: 'sys', name: 'def', description: 'desc' }],
+      activePersonaId: 'default'
     });
     vi.clearAllMocks();
   });
@@ -56,7 +78,6 @@ describe('App Store Logic', () => {
     useAppStore.setState({ 
       prompt: 'Test Prompt', 
       selectedModel: 'llama3',
-      settings: { systemPrompt: 'System' } 
     });
 
     // @ts-ignore

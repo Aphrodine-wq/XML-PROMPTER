@@ -80,3 +80,5 @@ export * from './error-handler.js';
 export * from './monitoring.js';
 export * from './compression.js';
 export * from './connection-pool.js';
+export * from './redis.js';
+export * from './vector-db.js';

@@ -4,20 +4,23 @@ import { PromptInput } from './components/PromptInput';
 import { XMLEditor } from './components/XMLEditor';
 import { XMLTreeVisualizer } from './components/tree/XMLTreeVisualizer';
 import { WireframePreview } from './components/preview/WireframePreview';
+import { CodePreview } from './components/preview/CodePreview';
 import { LandingPage } from './components/LandingPage';
+import { Dashboard } from './components/Dashboard';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { CommandMenu } from './components/CommandMenu';
+import { CommandPalette } from './components/CommandPalette'; // Updated from CommandMenu
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { useState, useEffect } from 'react';
 import { useAppStore } from './store';
 import { Toaster } from 'sonner';
 import { cn } from './utils';
-import { Maximize2, Minimize2, Network, Code2, Layout } from 'lucide-react';
+import { Maximize2, Minimize2, Network, Code2, Layout, AppWindow } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion'; // Added for view transitions
 
-function Dashboard() {
+function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [layout, setLayout] = useState<number[]>([20, 80]);
-  const [activeView, setActiveView] = useState<'code' | 'tree' | 'preview'>('code');
+  const [activeView, setActiveView] = useState<'code' | 'tree' | 'preview' | 'app'>('code');
   const { init, isZenMode, toggleZenMode } = useAppStore();
 
   useEffect(() => {
@@ -38,7 +41,7 @@ function Dashboard() {
 
   return (
     <div className="flex h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden font-sans selection:bg-blue-500/30 relative">
-      <CommandMenu />
+      <CommandPalette />
       
       {/* Zen Mode Toggle (Always Visible) */}
       <button 
@@ -66,53 +69,73 @@ function Dashboard() {
             collapsedSize={4}
             onCollapse={() => setCollapsed(true)}
             onExpand={() => setCollapsed(false)}
-            className="bg-slate-950"
+            className="bg-transparent" // Transparent for glass effect
           >
             <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
           </Panel>
 
-          <PanelResizeHandle className="w-1 bg-slate-900 hover:bg-blue-600 transition-colors relative flex items-center justify-center group outline-none focus:bg-blue-600">
+          <PanelResizeHandle className="w-1 bg-slate-900/50 hover:bg-blue-600 transition-colors relative flex items-center justify-center group outline-none focus:bg-blue-600">
              <div className="h-8 w-1 bg-slate-700 rounded-full group-hover:bg-white/50 transition-colors" />
           </PanelResizeHandle>
 
           <Panel defaultSize={layout[1]}>
             <PanelGroup direction="vertical">
-               <Panel defaultSize={35} minSize={20} className="bg-slate-900">
+               <Panel defaultSize={35} minSize={20} className="bg-slate-900/40 backdrop-blur-sm">
                   <PromptInput />
                </Panel>
 
-               <PanelResizeHandle className="h-1 bg-slate-900 hover:bg-blue-600 transition-colors relative flex items-center justify-center group outline-none focus:bg-blue-600 cursor-row-resize z-50">
+               <PanelResizeHandle className="h-1 bg-slate-900/50 hover:bg-blue-600 transition-colors relative flex items-center justify-center group outline-none focus:bg-blue-600 cursor-row-resize z-50">
                   <div className="w-8 h-1 bg-slate-700 rounded-full group-hover:bg-white/50 transition-colors" />
                </PanelResizeHandle>
 
                <Panel className="bg-[#1e1e1e] relative">
-                  <div className="absolute top-2 right-4 z-20 flex bg-slate-800 rounded p-1 gap-1">
+                  <div className="absolute top-2 right-4 z-20 flex bg-slate-800/80 backdrop-blur-md rounded-full p-1 gap-1 border border-slate-700/50 shadow-xl">
                     <button 
                       onClick={() => setActiveView('code')}
-                      className={cn("p-1.5 rounded transition-colors", activeView === 'code' ? "bg-slate-700 text-white" : "text-slate-400 hover:text-white")}
-                      title="Code View"
+                      className={cn("p-2 rounded-full transition-all", activeView === 'code' ? "bg-slate-700 text-white shadow-sm" : "text-slate-400 hover:text-white")}
+                      title="XML Code"
                     >
                       <Code2 className="w-4 h-4" />
                     </button>
                     <button 
                       onClick={() => setActiveView('tree')}
-                      className={cn("p-1.5 rounded transition-colors", activeView === 'tree' ? "bg-slate-700 text-white" : "text-slate-400 hover:text-white")}
-                      title="Tree Structure View"
+                      className={cn("p-2 rounded-full transition-all", activeView === 'tree' ? "bg-slate-700 text-white shadow-sm" : "text-slate-400 hover:text-white")}
+                      title="Structure Tree"
                     >
                       <Network className="w-4 h-4" />
                     </button>
                     <button 
                       onClick={() => setActiveView('preview')}
-                      className={cn("p-1.5 rounded transition-colors", activeView === 'preview' ? "bg-slate-700 text-white" : "text-slate-400 hover:text-white")}
-                      title="Wireframe Preview"
+                      className={cn("p-2 rounded-full transition-all", activeView === 'preview' ? "bg-slate-700 text-white shadow-sm" : "text-slate-400 hover:text-white")}
+                      title="Wireframe"
                     >
                       <Layout className="w-4 h-4" />
                     </button>
+                    <div className="w-px h-4 bg-slate-600 mx-1 self-center opacity-30" />
+                    <button 
+                      onClick={() => setActiveView('app')}
+                      className={cn("p-2 rounded-full transition-all", activeView === 'app' ? "bg-blue-600 text-white shadow-lg shadow-blue-900/50" : "text-slate-400 hover:text-white hover:bg-slate-700")}
+                      title="Generated Web App"
+                    >
+                      <AppWindow className="w-4 h-4" />
+                    </button>
                   </div>
 
-                  {activeView === 'code' && <XMLEditor />}
-                  {activeView === 'tree' && <XMLTreeVisualizer />}
-                  {activeView === 'preview' && <WireframePreview />}
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                        key={activeView}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                        className="h-full w-full"
+                    >
+                        {activeView === 'code' && <XMLEditor />}
+                        {activeView === 'tree' && <XMLTreeVisualizer />}
+                        {activeView === 'preview' && <WireframePreview />}
+                        {activeView === 'app' && <CodePreview />}
+                    </motion.div>
+                  </AnimatePresence>
                </Panel>
             </PanelGroup>
           </Panel>
@@ -141,6 +164,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/editor" 
+            element={
+              <ProtectedRoute>
+                <AppLayout />
               </ProtectedRoute>
             } 
           />

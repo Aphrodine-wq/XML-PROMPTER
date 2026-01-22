@@ -18,6 +18,7 @@ export function XMLEditor() {
   } = useAppStore();
   const [copied, setCopied] = useState(false);
   const monacoRef = useRef<any>(null);
+  const editorRef = useRef<any>(null);
 
   // Performance: Defer validation to avoid blocking UI (2-3x faster perceived responsiveness)
   const deferredXmlOutput = useDeferredValue(xmlOutput);
@@ -38,6 +39,7 @@ export function XMLEditor() {
   // Handle Monaco Initialization
   const handleEditorDidMount = (editor: any, monaco: any) => {
     monacoRef.current = monaco;
+    editorRef.current = editor;
     
     // Register XML Completion Provider
     monaco.languages.registerCompletionItemProvider('xml', {
@@ -93,6 +95,43 @@ export function XMLEditor() {
     });
   };
 
+  // 10x Feature: Listen for Tree Selection Events
+  useEffect(() => {
+    const handleNodeSelect = (e: CustomEvent) => {
+      const { tagName, content } = e.detail;
+      if (editorRef.current && monacoRef.current) {
+        const model = editorRef.current.getModel();
+        const matches = model.findMatches(`<${tagName}`, true, false, false, null, true);
+        
+        // Find the match that might contain the content (heuristic)
+        // For duplicates, we just jump to the first one or try to match context
+        if (matches.length > 0) {
+          const match = matches[0];
+          editorRef.current.revealRangeInCenter(match.range);
+          editorRef.current.setSelection(match.range);
+          
+          // Flash highlight decoration
+          const decorations = editorRef.current.deltaDecorations([], [
+            {
+              range: match.range,
+              options: {
+                isWholeLine: true,
+                className: 'bg-blue-900/50 border-l-2 border-blue-500'
+              }
+            }
+          ]);
+          
+          setTimeout(() => {
+            editorRef.current.deltaDecorations(decorations, []);
+          }, 1500);
+        }
+      }
+    };
+
+    window.addEventListener('xml-node-select', handleNodeSelect as any);
+    return () => window.removeEventListener('xml-node-select', handleNodeSelect as any);
+  }, []);
+
   // Global Shortcuts
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
@@ -116,7 +155,7 @@ export function XMLEditor() {
         if (e.key === 's') {
           e.preventDefault();
           if (currentFilePath) {
-            saveCurrentFile();
+            saveCurrentFile(xmlOutput);
           } else {
             handleDownload();
           }
@@ -233,7 +272,7 @@ export function XMLEditor() {
         </button>
         <div className="w-px h-4 bg-slate-700 mx-1" />
         <button 
-          onClick={currentFilePath ? saveCurrentFile : handleDownload}
+          onClick={currentFilePath ? () => saveCurrentFile(xmlOutput) : handleDownload}
           className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-md transition-colors"
           title="Save File (Cmd+S)"
         >

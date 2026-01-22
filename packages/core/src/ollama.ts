@@ -107,14 +107,39 @@ export class OllamaProvider implements AIProvider {
     onChunk?: (chunk: string) => void, 
     signal?: AbortSignal
   ): Promise<GenerationResponse> {
+    // Sanitize options to remove unknown fields that break Ollama 0.5.x
+    // Ollama 0.5+ is strict about JSON unmarshalling
+    const { model, prompt, stream, system, template, context, options: modelOptions } = options;
+    
+    // Only include fields that Ollama's API actually accepts
+    // See: https://github.com/ollama/ollama/blob/main/docs/api.md#generate-a-completion
+    const payload: any = {
+        model,
+        prompt,
+        stream: !!stream
+    };
+
+    if (system) payload.system = system;
+    if (template) payload.template = template;
+    if (context) payload.context = context;
+    if (modelOptions) payload.options = modelOptions;
+
+    // Use default json format if requesting json
+    if (modelOptions && modelOptions.format) {
+        payload.format = modelOptions.format;
+    }
+
     const response = await fetch(`${this.config.baseUrl}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(options),
+      body: JSON.stringify(payload),
       signal
     });
 
-    if (!response.ok) throw new Error('Failed to generate response');
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to generate response: ${response.status} ${response.statusText} - ${errorText}`);
+    }
 
     if (options.stream && response.body) {
       const reader = response.body.getReader();

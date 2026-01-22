@@ -1,0 +1,35 @@
+{
+  "name": "xml-gen-vscode",
+  "displayName": "XML Gen",
+  "description": "AI-Powered Web App Generator",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "xml-gen.start",
+        "title": "XML Gen: Start"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/node": "18.x",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@xmlpg/core": "*"
+  }
+}
