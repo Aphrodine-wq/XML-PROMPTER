@@ -40,15 +40,15 @@ function AppLayout() {
   }, []);
 
   return (
-    <div className="flex h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden font-sans selection:bg-blue-500/30 relative">
+    <div className="flex h-screen w-screen bg-white text-black overflow-hidden font-sans selection:bg-primary/20 relative">
       <CommandPalette />
-      
-      {/* Zen Mode Toggle (Always Visible) */}
-      <button 
+
+      {/* Zen Mode Toggle - Brutalist style */}
+      <button
         onClick={toggleZenMode}
         className={cn(
-          "absolute top-4 right-4 z-50 p-2 rounded-lg bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-white transition-all backdrop-blur-sm",
-          isZenMode && "bg-blue-600/20 text-blue-400 hover:bg-blue-600/30"
+          "absolute top-4 right-4 z-50 p-3 border-3 border-black font-black uppercase text-xs tracking-wider transition-all",
+          isZenMode ? "bg-primary" : "bg-white hover:bg-accent"
         )}
         title={isZenMode ? "Exit Zen Mode (Cmd+Shift+Z)" : "Enter Zen Mode (Cmd+Shift+Z)"}
       >
@@ -61,60 +61,61 @@ function AppLayout() {
         </div>
       ) : (
         <PanelGroup direction="horizontal" onLayout={setLayout}>
-          <Panel 
-            defaultSize={layout[0]} 
-            minSize={15} 
-            maxSize={30} 
+          <Panel
+            defaultSize={layout[0]}
+            minSize={15}
+            maxSize={30}
             collapsible={true}
             collapsedSize={4}
             onCollapse={() => setCollapsed(true)}
             onExpand={() => setCollapsed(false)}
-            className="bg-transparent" // Transparent for glass effect
+            className="bg-white border-r-4 border-black"
           >
             <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
           </Panel>
 
-          <PanelResizeHandle className="w-1 bg-slate-900/50 hover:bg-blue-600 transition-colors relative flex items-center justify-center group outline-none focus:bg-blue-600">
-             <div className="h-8 w-1 bg-slate-700 rounded-full group-hover:bg-white/50 transition-colors" />
+          <PanelResizeHandle className="w-2 bg-black hover:bg-primary transition-colors relative flex items-center justify-center group outline-none focus:bg-primary cursor-col-resize">
+             <div className="h-12 w-1 bg-white group-hover:bg-black transition-colors" />
           </PanelResizeHandle>
 
           <Panel defaultSize={layout[1]}>
             <PanelGroup direction="vertical">
-               <Panel defaultSize={35} minSize={20} className="bg-slate-900/40 backdrop-blur-sm">
+               <Panel defaultSize={35} minSize={20} className="bg-white border-b-4 border-black">
                   <PromptInput />
                </Panel>
 
-               <PanelResizeHandle className="h-1 bg-slate-900/50 hover:bg-blue-600 transition-colors relative flex items-center justify-center group outline-none focus:bg-blue-600 cursor-row-resize z-50">
-                  <div className="w-8 h-1 bg-slate-700 rounded-full group-hover:bg-white/50 transition-colors" />
+               <PanelResizeHandle className="h-2 bg-black hover:bg-primary transition-colors relative flex items-center justify-center group outline-none focus:bg-primary cursor-row-resize z-50">
+                  <div className="w-12 h-1 bg-white group-hover:bg-black transition-colors" />
                </PanelResizeHandle>
 
                <Panel className="bg-[#1e1e1e] relative">
-                  <div className="absolute top-2 right-4 z-20 flex bg-slate-800/80 backdrop-blur-md rounded-full p-1 gap-1 border border-slate-700/50 shadow-xl">
-                    <button 
+                  {/* View switcher - Brutalist style */}
+                  <div className="absolute top-4 right-4 z-20 flex border-3 border-white bg-black p-1 gap-1">
+                    <button
                       onClick={() => setActiveView('code')}
-                      className={cn("p-2 rounded-full transition-all", activeView === 'code' ? "bg-slate-700 text-white shadow-sm" : "text-slate-400 hover:text-white")}
+                      className={cn("p-2 transition-all font-bold", activeView === 'code' ? "bg-primary text-black" : "text-white hover:bg-white hover:text-black")}
                       title="XML Code"
                     >
                       <Code2 className="w-4 h-4" />
                     </button>
-                    <button 
+                    <button
                       onClick={() => setActiveView('tree')}
-                      className={cn("p-2 rounded-full transition-all", activeView === 'tree' ? "bg-slate-700 text-white shadow-sm" : "text-slate-400 hover:text-white")}
+                      className={cn("p-2 transition-all font-bold", activeView === 'tree' ? "bg-primary text-black" : "text-white hover:bg-white hover:text-black")}
                       title="Structure Tree"
                     >
                       <Network className="w-4 h-4" />
                     </button>
-                    <button 
+                    <button
                       onClick={() => setActiveView('preview')}
-                      className={cn("p-2 rounded-full transition-all", activeView === 'preview' ? "bg-slate-700 text-white shadow-sm" : "text-slate-400 hover:text-white")}
+                      className={cn("p-2 transition-all font-bold", activeView === 'preview' ? "bg-primary text-black" : "text-white hover:bg-white hover:text-black")}
                       title="Wireframe"
                     >
                       <Layout className="w-4 h-4" />
                     </button>
-                    <div className="w-px h-4 bg-slate-600 mx-1 self-center opacity-30" />
-                    <button 
+                    <div className="w-0.5 bg-white/30" />
+                    <button
                       onClick={() => setActiveView('app')}
-                      className={cn("p-2 rounded-full transition-all", activeView === 'app' ? "bg-blue-600 text-white shadow-lg shadow-blue-900/50" : "text-slate-400 hover:text-white hover:bg-slate-700")}
+                      className={cn("p-2 transition-all font-bold", activeView === 'app' ? "bg-accent text-black" : "text-white hover:bg-white hover:text-black")}
                       title="Generated Web App"
                     >
                       <AppWindow className="w-4 h-4" />
@@ -124,10 +125,10 @@ function AppLayout() {
                   <AnimatePresence mode="wait">
                     <motion.div
                         key={activeView}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.2 }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15 }}
                         className="h-full w-full"
                     >
                         {activeView === 'code' && <XMLEditor />}
