@@ -8,6 +8,7 @@ import { CodePreview } from './components/preview/CodePreview';
 import { LandingPage } from './components/LandingPage';
 import { Dashboard } from './components/Dashboard';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { BuilderPage } from './components/BuilderPage';
 import { CommandPalette } from './components/CommandPalette'; // Updated from CommandMenu
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { useState, useEffect } from 'react';
@@ -57,7 +58,7 @@ function AppLayout() {
 
       {isZenMode ? (
         <div className="flex-1 h-full w-full bg-[#1e1e1e] animate-in fade-in duration-300">
-           <XMLEditor />
+          <XMLEditor />
         </div>
       ) : (
         <PanelGroup direction="horizontal" onLayout={setLayout}>
@@ -75,69 +76,69 @@ function AppLayout() {
           </Panel>
 
           <PanelResizeHandle className="w-2 bg-black hover:bg-primary transition-colors relative flex items-center justify-center group outline-none focus:bg-primary cursor-col-resize">
-             <div className="h-12 w-1 bg-white group-hover:bg-black transition-colors" />
+            <div className="h-12 w-1 bg-white group-hover:bg-black transition-colors" />
           </PanelResizeHandle>
 
           <Panel defaultSize={layout[1]}>
             <PanelGroup direction="vertical">
-               <Panel defaultSize={35} minSize={20} className="bg-white border-b-4 border-black">
-                  <PromptInput />
-               </Panel>
+              <Panel defaultSize={35} minSize={20} className="bg-white border-b-4 border-black">
+                <PromptInput />
+              </Panel>
 
-               <PanelResizeHandle className="h-2 bg-black hover:bg-primary transition-colors relative flex items-center justify-center group outline-none focus:bg-primary cursor-row-resize z-50">
-                  <div className="w-12 h-1 bg-white group-hover:bg-black transition-colors" />
-               </PanelResizeHandle>
+              <PanelResizeHandle className="h-2 bg-black hover:bg-primary transition-colors relative flex items-center justify-center group outline-none focus:bg-primary cursor-row-resize z-50">
+                <div className="w-12 h-1 bg-white group-hover:bg-black transition-colors" />
+              </PanelResizeHandle>
 
-               <Panel className="bg-[#1e1e1e] relative">
-                  {/* View switcher - Brutalist style */}
-                  <div className="absolute top-4 right-4 z-20 flex border-3 border-white bg-black p-1 gap-1">
-                    <button
-                      onClick={() => setActiveView('code')}
-                      className={cn("p-2 transition-all font-bold", activeView === 'code' ? "bg-primary text-black" : "text-white hover:bg-white hover:text-black")}
-                      title="XML Code"
-                    >
-                      <Code2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setActiveView('tree')}
-                      className={cn("p-2 transition-all font-bold", activeView === 'tree' ? "bg-primary text-black" : "text-white hover:bg-white hover:text-black")}
-                      title="Structure Tree"
-                    >
-                      <Network className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setActiveView('preview')}
-                      className={cn("p-2 transition-all font-bold", activeView === 'preview' ? "bg-primary text-black" : "text-white hover:bg-white hover:text-black")}
-                      title="Wireframe"
-                    >
-                      <Layout className="w-4 h-4" />
-                    </button>
-                    <div className="w-0.5 bg-white/30" />
-                    <button
-                      onClick={() => setActiveView('app')}
-                      className={cn("p-2 transition-all font-bold", activeView === 'app' ? "bg-accent text-black" : "text-white hover:bg-white hover:text-black")}
-                      title="Generated Web App"
-                    >
-                      <AppWindow className="w-4 h-4" />
-                    </button>
-                  </div>
+              <Panel className="bg-[#1e1e1e] relative">
+                {/* View switcher - Brutalist style */}
+                <div className="absolute top-4 right-4 z-20 flex border-3 border-white bg-black p-1 gap-1">
+                  <button
+                    onClick={() => setActiveView('code')}
+                    className={cn("p-2 transition-all font-bold", activeView === 'code' ? "bg-primary text-black" : "text-white hover:bg-white hover:text-black")}
+                    title="XML Code"
+                  >
+                    <Code2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setActiveView('tree')}
+                    className={cn("p-2 transition-all font-bold", activeView === 'tree' ? "bg-primary text-black" : "text-white hover:bg-white hover:text-black")}
+                    title="Structure Tree"
+                  >
+                    <Network className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setActiveView('preview')}
+                    className={cn("p-2 transition-all font-bold", activeView === 'preview' ? "bg-primary text-black" : "text-white hover:bg-white hover:text-black")}
+                    title="Wireframe"
+                  >
+                    <Layout className="w-4 h-4" />
+                  </button>
+                  <div className="w-0.5 bg-white/30" />
+                  <button
+                    onClick={() => setActiveView('app')}
+                    className={cn("p-2 transition-all font-bold", activeView === 'app' ? "bg-accent text-black" : "text-white hover:bg-white hover:text-black")}
+                    title="Generated Web App"
+                  >
+                    <AppWindow className="w-4 h-4" />
+                  </button>
+                </div>
 
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                        key={activeView}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.15 }}
-                        className="h-full w-full"
-                    >
-                        {activeView === 'code' && <XMLEditor />}
-                        {activeView === 'tree' && <XMLTreeVisualizer />}
-                        {activeView === 'preview' && <WireframePreview />}
-                        {activeView === 'app' && <CodePreview />}
-                    </motion.div>
-                  </AnimatePresence>
-               </Panel>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeView}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                    className="h-full w-full"
+                  >
+                    {activeView === 'code' && <XMLEditor />}
+                    {activeView === 'tree' && <XMLTreeVisualizer />}
+                    {activeView === 'preview' && <WireframePreview />}
+                    {activeView === 'app' && <CodePreview />}
+                  </motion.div>
+                </AnimatePresence>
+              </Panel>
             </PanelGroup>
           </Panel>
         </PanelGroup>
@@ -160,21 +161,29 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<LandingPage />} />
-          <Route 
-            path="/" 
+          <Route
+            path="/"
             element={
               <ProtectedRoute>
                 <Dashboard />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/editor" 
+          <Route
+            path="/editor"
             element={
               <ProtectedRoute>
                 <AppLayout />
               </ProtectedRoute>
-            } 
+            }
+          />
+          <Route
+            path="/builder"
+            element={
+              <ProtectedRoute>
+                <BuilderPage />
+              </ProtectedRoute>
+            }
           />
         </Routes>
       </Router>

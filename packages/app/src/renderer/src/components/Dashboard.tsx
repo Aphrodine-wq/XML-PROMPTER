@@ -18,7 +18,7 @@ export function Dashboard() {
 
   const handleNewProject = () => {
     resetProject();
-    navigate('/editor');
+    navigate('/builder'); // Re-routed to the new builder interface
   };
 
   const handleOpenProject = (path: string) => {
@@ -63,7 +63,7 @@ export function Dashboard() {
         {/* Hero/Quick Start */}
         <div className="mb-16">
           <h1 className="font-black text-6xl md:text-7xl tracking-tighter mb-6 uppercase">
-            Your<br/>Workspace
+            Your<br />Workspace
           </h1>
           <div className="flex flex-col sm:flex-row gap-4">
             <button
@@ -71,7 +71,7 @@ export function Dashboard() {
               className="group px-8 py-5 bg-primary border-4 border-black font-black text-lg uppercase tracking-wider flex items-center gap-3 hover:translate-x-1 hover:translate-y-1 transition-transform shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
             >
               <Plus className="w-6 h-6" />
-              New Project
+              Build Website
               <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
             </button>
             <button className="px-8 py-5 bg-white border-4 border-black font-black text-lg uppercase tracking-wider hover:bg-black hover:text-white transition-colors flex items-center gap-3">
@@ -126,7 +126,7 @@ export function Dashboard() {
                     transition={{ delay: index * 0.05 }}
                     className="group flex items-start gap-4 p-5 border-3 border-black hover:bg-accent transition-colors cursor-pointer"
                     onClick={() => {
-                        navigate('/editor');
+                      navigate('/editor');
                     }}
                   >
                     <div className="mt-1 p-3 bg-black text-white group-hover:bg-primary group-hover:text-black transition-colors">
