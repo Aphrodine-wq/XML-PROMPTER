@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store';
-import { FileCode, Github, ArrowRight, CheckCircle, Shield, Zap } from 'lucide-react';
+import { FileCode, Github, ArrowRight, Square } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export function LandingPage() {
@@ -13,95 +13,125 @@ export function LandingPage() {
   };
 
   return (
-    <div className="h-screen w-screen bg-slate-950 text-white overflow-y-auto selection:bg-blue-500/30">
-      {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-slate-800/50 bg-slate-950/80 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2 font-bold text-xl">
-            <div className="bg-blue-600 p-1.5 rounded-lg shadow-lg shadow-blue-500/20">
-              <FileCode className="w-5 h-5 text-white" />
+    <div className="h-screen w-screen bg-white text-black overflow-y-auto selection:bg-primary/20">
+      {/* Navbar - Brutalist approach */}
+      <nav className="fixed top-0 left-0 right-0 z-50 border-b-4 border-black bg-white">
+        <div className="max-w-7xl mx-auto px-8 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-black p-2 border-3 border-black">
+              <FileCode className="w-6 h-6 text-white" />
             </div>
-            <span className="bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">XML Gen</span>
+            <span className="font-black text-2xl tracking-tight uppercase">XML GEN</span>
           </div>
-          <div className="flex items-center gap-4">
-             <button className="text-sm font-medium text-slate-400 hover:text-white transition-colors">Documentation</button>
-             <button className="text-sm font-medium text-slate-400 hover:text-white transition-colors">GitHub</button>
+          <div className="flex items-center gap-6">
+             <button className="text-sm font-bold uppercase tracking-wider hover:text-primary transition-colors">Docs</button>
+             <button className="text-sm font-bold uppercase tracking-wider hover:text-primary transition-colors">GitHub</button>
           </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <div className="pt-32 pb-20 px-6 max-w-6xl mx-auto text-center">
-        <motion.div 
+      {/* Hero Section - Bold, asymmetric layout */}
+      <div className="pt-32 pb-16 px-8 max-w-7xl mx-auto">
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.3 }}
+          className="grid grid-cols-12 gap-8"
         >
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/20 border border-blue-800 text-blue-400 text-xs font-medium mb-6">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-            </span>
-            v1.0 Now Available
-          </div>
-          
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6">
-            Generate XML Websites <br/>
-            <span className="bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">with Local AI</span>
-          </h1>
-          
-          <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-            Stop writing boilerplate. Describe your website in plain English and let your local LLM generate production-ready XML prompts instantly.
-          </p>
+          {/* Left: Large text */}
+          <div className="col-span-12 lg:col-span-8">
+            <div className="inline-flex items-center gap-2 px-4 py-2 border-3 border-black mb-8 bg-accent">
+              <Square className="w-3 h-3 fill-black" />
+              <span className="font-black text-xs uppercase tracking-wider">v1.0 Live</span>
+            </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button 
-              onClick={handleLogin}
-              className="px-8 py-4 bg-white text-slate-950 rounded-lg font-bold text-lg flex items-center gap-3 hover:bg-slate-200 transition-all shadow-xl shadow-white/5 hover:scale-105"
-            >
-              <Github className="w-5 h-5" />
-              Sign in with GitHub
-            </button>
-            <button className="px-8 py-4 bg-slate-800 text-white rounded-lg font-bold text-lg flex items-center gap-2 hover:bg-slate-700 transition-all border border-slate-700">
-              Download Desktop App
-              <ArrowRight className="w-5 h-5" />
-            </button>
+            <h1 className="font-black text-6xl md:text-8xl tracking-tighter leading-none mb-8">
+              BUILD XML<br/>
+              WEBSITES<br/>
+              <span className="inline-block border-b-6 border-primary pb-2">INSTANTLY</span>
+            </h1>
+
+            <p className="text-xl md:text-2xl font-medium max-w-2xl mb-12 leading-tight text-gray-700">
+              No more boilerplate. Describe your vision, get production-ready XML.
+              <span className="font-black"> 100% local. 100% private.</span>
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-start gap-4">
+              <button
+                onClick={handleLogin}
+                className="group px-8 py-5 bg-primary border-4 border-black font-black text-lg uppercase tracking-wider flex items-center gap-3 hover:translate-x-1 hover:translate-y-1 transition-transform shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+              >
+                <Github className="w-6 h-6" />
+                Sign In
+                <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+              </button>
+              <button className="px-8 py-5 bg-white border-4 border-black font-black text-lg uppercase tracking-wider hover:bg-black hover:text-white transition-colors">
+                Download App
+              </button>
+            </div>
+          </div>
+
+          {/* Right: Visual element - brutalist blocks */}
+          <div className="col-span-12 lg:col-span-4 flex items-center justify-center lg:justify-end">
+            <div className="relative w-64 h-64">
+              <div className="absolute top-0 left-0 w-32 h-32 bg-primary border-4 border-black"></div>
+              <div className="absolute bottom-0 right-0 w-32 h-32 bg-black"></div>
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 bg-accent border-4 border-black"></div>
+            </div>
           </div>
         </motion.div>
       </div>
 
-      {/* Features Grid */}
-      <div className="py-20 bg-slate-900/50 border-t border-slate-800">
-        <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8">
-          <FeatureCard 
-            icon={<Shield className="w-6 h-6 text-emerald-400" />}
-            title="Privacy First"
-            desc="Runs 100% offline using Ollama. Your prompts never leave your machine."
-          />
-          <FeatureCard 
-            icon={<Zap className="w-6 h-6 text-amber-400" />}
-            title="Lightning Fast"
-            desc="Optimized for local inference with streaming responses and Monaco editor."
-          />
-          <FeatureCard 
-            icon={<CheckCircle className="w-6 h-6 text-blue-400" />}
-            title="Structured Output"
-            desc="Guaranteed valid XML format perfect for automated website generation pipelines."
-          />
+      {/* Features - Bold grid */}
+      <div className="py-20 bg-black text-white border-t-4 border-black">
+        <div className="max-w-7xl mx-auto px-8">
+          <h2 className="font-black text-4xl uppercase tracking-tight mb-12">Why This Tool Exists</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <FeatureCard
+              number="01"
+              title="Privacy First"
+              desc="Runs 100% offline using Ollama. Your prompts never leave your machine."
+            />
+            <FeatureCard
+              number="02"
+              title="Lightning Fast"
+              desc="Optimized for local inference with streaming responses and Monaco editor."
+            />
+            <FeatureCard
+              number="03"
+              title="Structured Output"
+              desc="Guaranteed valid XML format perfect for automated website generation pipelines."
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* CTA Section */}
+      <div className="py-24 bg-primary border-t-4 border-black">
+        <div className="max-w-7xl mx-auto px-8 text-center">
+          <h2 className="font-black text-5xl md:text-7xl tracking-tighter mb-8 uppercase">
+            Ready to Build?
+          </h2>
+          <button
+            onClick={handleLogin}
+            className="px-12 py-6 bg-black text-white border-4 border-black font-black text-xl uppercase tracking-wider hover:bg-white hover:text-black transition-colors shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:translate-y-1"
+          >
+            Start Now →
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-function FeatureCard({ icon, title, desc }: { icon: any, title: string, desc: string }) {
+function FeatureCard({ number, title, desc }: { number: string, title: string, desc: string }) {
   return (
-    <div className="p-6 rounded-2xl bg-slate-950 border border-slate-800 hover:border-slate-700 transition-colors">
-      <div className="w-12 h-12 rounded-lg bg-slate-900 flex items-center justify-center mb-4">
-        {icon}
+    <div className="p-8 border-4 border-white hover:bg-white hover:text-black transition-colors group">
+      <div className="font-black text-6xl mb-4 opacity-30 group-hover:opacity-100 transition-opacity group-hover:text-primary">
+        {number}
       </div>
-      <h3 className="text-xl font-bold mb-2 text-slate-100">{title}</h3>
-      <p className="text-slate-400 leading-relaxed">{desc}</p>
+      <h3 className="text-2xl font-black mb-3 uppercase tracking-tight">{title}</h3>
+      <p className="text-gray-300 group-hover:text-gray-700 leading-relaxed font-medium">{desc}</p>
     </div>
   );
 }
